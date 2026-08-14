@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgenticEval - AI-Assisted Subjective Evaluation System</title>
+  <!-- Google Fonts: Inter, Newsreader & Caveat (v2 design system) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- LOGIN SCREEN WRAPPER -->
+  <div id="login-screen" class="login-wrapper">
+    <div class="login-card-container">
+      <!-- Sign In Panel -->
+      <div class="login-form-panel">
+        <div class="login-branding-header login-branding-header-center">
+          <div class="logo-icon small-icon">
+            <i class="fa-solid fa-brain-circuit"></i>
+          </div>
+          <span class="logo-name">Agentic<span>Eval</span></span>
+        </div>
+        <div class="form-header form-header-center">
+          <h2>Examiner Sign In</h2>
+          <p>Please enter your university credentials to access the grading dashboard.</p>
+        </div>
+
+        <form id="login-form" onsubmit="handleLoginSubmit(event)" novalidate>
+          <!-- Custom form error toast -->
+          <div id="login-error-msg" class="form-alert alert-error" style="display: none;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Invalid email format or password length. Please verify.</span>
+          </div>
+
+          <div class="form-group">
+            <label for="login-email">University Email Address</label>
+            <div class="input-icon-wrapper">
+              <i class="fa-regular fa-envelope input-icon-inner"></i>
+              <input type="email" id="login-email" class="form-control with-icon" placeholder="name@university.edu" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="d-flex justify-between items-center mb-1">
+              <label for="login-password">Password</label>
+              <a href="#forgot" class="forgot-pass-link">Forgot password?</a>
+            </div>
+            <div class="input-icon-wrapper">
+              <i class="fa-solid fa-lock input-icon-inner"></i>
+              <input type="password" id="login-password" class="form-control with-icon" placeholder="••••••••••••" required>
+              <button type="button" id="toggle-password-btn" class="password-toggle-btn">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-options-row">
+            <label class="checkbox-container">
+              <input type="checkbox" checked>
+              <span class="checkmark"></span>
+              Remember this device for 30 days
+            </label>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-login-submit" id="btn-login-text">
+            <span>Log In to Workspace</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+
+          <!-- SSO options -->
+          <div class="sso-divider">
+            <span>Or Sign In With</span>
+          </div>
+
+          <div class="sso-grid">
+            <button type="button" class="btn btn-outline" onclick="simulateSSOLogin('Google Workspace')">
+              <i class="fa-brands fa-google text-danger"></i> Google SSO
+            </button>
+            <button type="button" class="btn btn-outline" onclick="simulateSSOLogin('Shibboleth')">
+              <i class="fa-solid fa-network-wired text-primary"></i> Shibboleth SSO
+            </button>
+          </div>
+        </form>
+
+        <div class="login-form-footer">
+          <p>Need support or access rights? <a href="#help">Contact Administrative IT Services</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER (Guarded by Login State) -->
+  <div id="app-wrapper" class="app-container" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon">
+          <i class="fa-solid fa-brain-circuit"></i>
+        </div>
+        <div class="logo-text">
+          <h2>Agentic<span>Eval</span></h2>
+          <span class="version">v1.2.0-beta</span>
+        </div>
+      </div>
+
+      <nav class="nav-links">
+        <a href="#dashboard" class="nav-link active" data-tab="dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#upload" class="nav-link" data-tab="upload">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span>Upload Scripts</span>
+        </a>
+        <a href="#workspace" class="nav-link" data-tab="workspace">
+          <i class="fa-solid fa-square-poll-horizontal"></i>
+          <span>Evaluation Workspace</span>
+          <span class="badge" id="pending-badge">3</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-profile">
+          <div class="user-avatar">
+            <span class="avatar-letter">D</span>
+          </div>
+          <div class="user-info">
+            <span class="user-name">Dr. Devendra R.</span>
+            <span class="user-role">Head Examiner (CS)</span>
+          </div>
+        </div>
+        <button class="logout-btn" id="logout-sidebar-btn" title="Log Out"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <h1 id="page-title">Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <!-- Quick Selector for Active Batch -->
+          <div class="dropdown-container">
+            <i class="fa-solid fa-folder-open"></i>
+            <select id="batch-selector">
+              <option value="cs101">CS101: Data Structures & Algorithms</option>
+              <option value="me202">ME202: Thermodynamics</option>
+              <option value="ee301">EE301: Microprocessors</option>
+            </select>
+          </div>
+          <!-- Notification Bell -->
+          <button class="icon-button notification-trigger">
+            <i class="fa-regular fa-bell"></i>
+            <span class="notification-badge"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views (Tabs) -->
+      <div class="view-container">
+
+        <!-- 1. DASHBOARD VIEW -->
+        <section id="dashboard-view" class="tab-view active">
+          <!-- Key Metrics Grid -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">Scripts Evaluated</span>
+                <span class="metric-icon val-blue"><i class="fa-solid fa-file-invoice"></i></span>
+              </div>
+              <div class="metric-value" id="stat-evaluated">84/120</div>
+              <div class="metric-progress-wrapper">
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" style="width: 70%;"></div>
+                </div>
+                <span class="progress-percentage">70%</span>
+              </div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-header">
+                <span class="metric-title">Pending Human Review</span>
+                <span class="metric-icon val-orange"><i class="fa-solid fa-user-check"></i></span>
+              </div>
+              <div class="metric-value" id="stat-pending">36</div>
+              <div class="metric-trend text-warning">
+                3 critical discrepancies flagged
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Grid: Recent Batches & Quick Actions -->
+          <div class="dashboard-grid">
+            <!-- Left Panel: Evaluation Queue -->
+            <div class="dashboard-panel main-panel">
+              <div class="panel-header">
+                <h3>Evaluation Queue - Active Batch</h3>
+                <div class="panel-actions">
+                  <select class="search-input" id="queue-status-filter" style="width: auto; cursor: pointer;">
+                    <option value="all">All Sheets</option>
+                    <option value="checked">Checked</option>
+                    <option value="unchecked">Unchecked</option>
+                  </select>
+                  <input type="text" placeholder="Search roll no..." class="search-input" id="queue-search">
+                  <button class="btn btn-outline btn-sm"><i class="fa-solid fa-filter"></i> Filter</button>
+                </div>
+              </div>
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Roll Number</th>
+                      <th>Student Name</th>
+                      <th>Submission Format</th>
+                      <th>AI Suggested Marks</th>
+                      <th>AI Confidence</th>
+                      <th>Question Paper</th>
+                      <th>Pipeline Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="queue-table-body">
+                    <!-- Loaded dynamically via JS -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 2. UPLOAD & DIGITIZATION VIEW -->
+        <section id="upload-view" class="tab-view">
+          <div class="upload-wrapper">
+
+            <!-- Panel A: Question Paper Upload -->
+            <div class="dashboard-panel upload-panel">
+              <div class="panel-header">
+                <h3><i class="fa-solid fa-file-circle-question" style="margin-right: 0.45rem;"></i>Question Paper</h3>
+              </div>
+              <div class="drag-drop-zone qp-zone" id="qp-drop-zone">
+                <i class="fa-solid fa-file-circle-question cloud-icon"></i>
+                <h3>Upload Question Paper</h3>
+                <p>PDF or image of the exam question paper that answer sheets will be graded against.</p>
+                <div class="file-select-row">
+                  <button class="btn btn-primary" onclick="document.getElementById('qp-file-input').click()">
+                    Browse Files
+                  </button>
+                  <input type="file" id="qp-file-input" accept=".pdf,.png,.jpg,.jpeg" style="display: none;">
+                </div>
+              </div>
+              <div class="qp-list mt-4" id="qp-list">
+                <p class="text-muted small">No question paper uploaded yet.</p>
+              </div>
+            </div>
+
+            <!-- Panel B: Answer Sheet Upload -->
+            <div class="dashboard-panel upload-panel">
+              <div class="panel-header">
+                <h3><i class="fa-solid fa-file-invoice" style="margin-right: 0.45rem;"></i>Answer Sheets</h3>
+              </div>
+              <div class="form-group">
+                <label for="evaluation-qp-select">Evaluate against question paper</label>
+                <select class="form-control" id="evaluation-qp-select">
+                  <option value="">Select a question paper...</option>
+                </select>
+              </div>
+              <div class="drag-drop-zone" id="drop-zone">
+                <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
+                <h3>Drag & Drop Scanned Answer Sheets</h3>
+                <p>Supports scanned PDFs or folder of images. Or <a href="sample_student_paper.pdf" download style="color: var(--primary); text-decoration: underline; font-weight: 600;">download this generated sample paper (PDF)</a> to test the upload pipeline.</p>
+                <div class="file-select-row">
+                  <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                    Browse Files
+                  </button>
+                  <input type="file" id="file-input" multiple style="display: none;">
+                  <button class="btn btn-secondary" id="load-sample-btn">
+                    <i class="fa-solid fa-folder-open"></i> Load Sample Evaluation Scripts
+                  </button>
+                </div>
+              </div>
+
+              <!-- Upload Queue List -->
+              <div class="upload-list-panel mt-4" style="display: none;" id="upload-progress-panel">
+                <div class="panel-header">
+                  <h3>Uploading and Processing Pipeline</h3>
+                  <button class="btn btn-danger btn-sm" id="cancel-upload-btn">Cancel All</button>
+                </div>
+                <div class="upload-items-list" id="upload-items-container">
+                  <!-- Dynamic Upload Items -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- 3. WORKSPACE VIEW (v2-STYLE EVALUATION WORKSPACE) -->
+        <section id="workspace-view" class="tab-view">
+          <div id="ws2" class="ws2">
+            <header class="ws2-topbar">
+              <div class="ws2-brand">
+                <div class="ws2-brand-name">Evaluation <span class="ws2-lt">Workspace</span></div>
+                <div class="ws2-brand-sub">Assisted marking</div>
+              </div>
+              <div class="ws2-candidate">
+                <div class="ws2-vsep"></div>
+                <div class="ws2-fld">Student <b id="ws2StudentName">—</b></div>
+                <span class="ws2-pill" id="ws2StudentRoll">—</span>
+              </div>
+              <div class="ws2-shortcuts">
+                <span class="ws2-kbd"><b>A</b> confirm</span>
+                <span class="ws2-kbd"><b>F</b> flag</span>
+                <span class="ws2-kbd"><b>← →</b> questions</span>
+              </div>
+            </header>
+
+            <div class="ws2-workspace">
+
+              <section class="ws2-pane ws2-pane-left">
+                <div class="ws2-pane-toolbar">
+                  <div class="ws2-pane-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+                    Answer sheet
+                  </div>
+                  <div class="ws2-controls">
+                    <div class="ws2-ctl-group">
+                      <button class="ws2-icobtn" id="ws2ZoomOut" title="Zoom out" aria-label="Zoom out">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg>
+                      </button>
+                      <span class="ws2-zoomval" id="ws2ZoomVal">100%</span>
+                      <button class="ws2-icobtn" id="ws2ZoomIn" title="Zoom in" aria-label="Zoom in">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>
+                      </button>
+                    </div>
+                    <div class="ws2-tdiv"></div>
+                    <div class="ws2-ctl-group">
+                      <button class="ws2-icobtn" id="ws2PgPrev" title="Previous page" aria-label="Previous page">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                      </button>
+                      <span class="ws2-pagelbl" id="ws2PageLabel">p. 1 / 2</span>
+                      <button class="ws2-icobtn" id="ws2PgNext" title="Next page" aria-label="Next page">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="ws2-sheet-scroll" id="ws2SheetScroll">
+                  <div class="ws2-sheet-zoom">
+                    <div class="ws2-sheet" id="ws2Sheet">
+                      <div class="ws2-sheet-hdr">
+                        <span id="ws2SheetSeat">—</span>
+                        <span id="ws2SheetPaper">—</span>
+                        <span id="ws2SheetPage">Page 1</span>
+                      </div>
+                      <div id="ws2SheetBody"></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="ws2-pane ws2-pane-right">
+                <div class="ws2-pane-toolbar">
+                  <div class="ws2-pane-title">Suggested evaluation</div>
+                  <div class="ws2-controls">
+                    <span class="ws2-conf" id="ws2ConfBadge"><span class="ws2-dot"></span><span id="ws2ConfLabel">High confidence</span></span>
+                  </div>
+                </div>
+
+                <div class="ws2-eval-scroll" id="ws2EvalScroll">
+
+                  <article class="ws2-card">
+                    <div class="ws2-card-head">
+                      <span class="ws2-kicker" id="ws2QNo">Question 1</span>
+                    </div>
+                    <div class="ws2-q-text" id="ws2QText"></div>
+                    <div class="ws2-q-meta">
+                      <span><b id="ws2QMax">10</b> marks</span>
+                      <span class="ws2-middot">·</span>
+                      <span><b id="ws2QCritN">4</b> criteria</span>
+                      <span class="ws2-middot">·</span>
+                      <span>rubric-grounded</span>
+                    </div>
+                  </article>
+
+                  <article class="ws2-card">
+                    <div class="ws2-card-head">
+                      <span class="ws2-kicker">Digitized answer</span>
+                      <button class="ws2-model-toggle" id="ws2AnsToggle">Show
+                        <svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                      </button>
+                    </div>
+                    <div class="ws2-model-answer" id="ws2StudentAnswer" hidden></div>
+                  </article>
+
+                  <article class="ws2-card ws2-rubric">
+                    <div class="ws2-card-head">
+                      <span class="ws2-kicker">Rubric evaluation</span>
+                    </div>
+                    <div id="ws2RubricRows"></div>
+                    <div class="ws2-total-row">
+                      <div>
+                        <div class="ws2-total-lbl">Total</div>
+                        <div class="ws2-total-src" id="ws2ScoreSrc">Suggested · not yet confirmed</div>
+                      </div>
+                      <div class="ws2-total-val"><span id="ws2QScore">0</span><span class="ws2-of"> / <span id="ws2QScoreMax">10</span></span></div>
+                    </div>
+                  </article>
+
+                  <article class="ws2-card">
+                    <div class="ws2-notes-row">
+                      <svg class="icon pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                      <span class="ws2-kicker">Teacher note</span>
+                    </div>
+                    <textarea class="ws2-note" id="ws2Notes" placeholder="Add a private note for the student or for your records…"></textarea>
+                  </article>
+
+                </div>
+
+                <div class="ws2-actionbar">
+                  <div class="ws2-actions">
+                    <button class="ws2-btn ws2-btn-primary" id="ws2BtnConfirm">Confirm marks <span class="ws2-kbd">A</span></button>
+                    <button class="ws2-btn ws2-btn-ghost" id="ws2BtnAdjust">Adjust marks</button>
+                    <button class="ws2-btn ws2-btn-tone" id="ws2BtnFlag">
+                      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4l13-1v12l-13 1"/></svg>
+                      Flag <span class="ws2-kbd">F</span>
+                    </button>
+                  </div>
+                  <div class="ws2-status" id="ws2Status">Suggested marks are ready to review — confirm, adjust, or flag in a few seconds.</div>
+                </div>
+              </section>
+            </div>
+
+            <nav class="ws2-navbar">
+              <span class="ws2-nav-caption">Questions</span>
+              <div class="ws2-qnav" id="ws2QNav"></div>
+              <div class="ws2-footer-right">
+                <div class="ws2-running">
+                  <div class="ws2-k">Reviewed total</div>
+                  <div class="ws2-v"><span id="ws2SheetScore">0</span><span class="ws2-of"> / <span id="ws2SheetMax">0</span></span></div>
+                </div>
+                <div class="ws2-review">
+                  <span class="ws2-k">Review</span>
+                  <div class="ws2-track ws2-track-mini"><div class="ws2-fill" id="ws2ProgFill"></div></div>
+                  <span class="ws2-v" id="ws2ReviewLabel">0 of 2</span>
+                </div>
+              </div>
+            </nav>
+          </div>
+        </section>
+
+
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

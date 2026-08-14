@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluation Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-2: #F6F6F7;
+  --line: #ECECEE;
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #6B7280;
+  --ink-4: #9CA3AF;
+  --accent: #4F46E5;
+  --accent-strong: #4338CA;
+  --accent-soft: #EEF0FE;
+  --success: #2E7D5B;
+  --success-soft: #E7F1EC;
+  --warning: #B0762A;
+  --warning-soft: #F6EEE0;
+  --error: #C0564F;
+  --error-soft: #F9EBEA;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 14px;
+  --shadow-doc: 0 1px 2px rgba(16, 24, 40, .05), 0 4px 16px rgba(16, 24, 40, .05);
+  --sans: "Inter", system-ui, -apple-system, sans-serif;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --hand: "Caveat", "Segoe Script", cursive;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+button { font-family: inherit; }
+::selection { background: var(--accent-soft); color: var(--accent-strong); }
+.tab { font-variant-numeric: tabular-nums; }
+svg { display: block; }
+.icon { width: 15px; height: 15px; flex-shrink: 0; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #DCDDE1; border-radius: 99px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #C9CBCF; background-clip: padding-box; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------------- Top bar ---------------- */
+.topbar {
+  flex-shrink: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+.brand-name { font-size: 14.5px; font-weight: 600; letter-spacing: -.02em; white-space: nowrap; }
+.brand-name .lt { font-weight: 400; color: var(--ink-3); }
+.brand-sub { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; white-space: nowrap; }
+
+.candidate { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.vsep { width: 1px; height: 18px; background: var(--line); }
+.fld { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+.fld b { color: var(--ink); font-weight: 600; }
+.pill-id {
+  font-size: 11.5px; font-weight: 500; color: var(--ink-2);
+  background: var(--surface-2); border-radius: 7px; padding: 3px 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shortcuts { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.kbd {
+  font-size: 10.5px; font-weight: 500; color: var(--ink-3);
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 6px; padding: 2px 7px; letter-spacing: .02em;
+}
+.kbd b { color: var(--ink); font-weight: 600; }
+
+/* ---------------- Workspace split ---------------- */
+.workspace { flex: 1; display: flex; min-height: 0; }
+.pane { display: flex; flex-direction: column; min-width: 0; }
+.pane-left { flex: 1.06; border-right: 1px solid var(--line); background: var(--surface); }
+.pane-right { flex: 1; background: var(--bg); }
+
+.pane-toolbar {
+  flex-shrink: 0; height: 48px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.pane-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.pane-title .icon { color: var(--ink-4); }
+
+.controls { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.control-group {
+  display: flex; align-items: center; gap: 2px;
+  background: var(--surface-2); border-radius: 10px; padding: 2px;
+}
+.icobtn {
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center;
+  background: transparent; border: none; cursor: pointer;
+  color: var(--ink-3); transition: background .15s ease, color .15s ease;
+}
+.icobtn:hover { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-doc); }
+.icobtn:active { transform: scale(.96); }
+.zoomval { font-size: 11px; font-weight: 500; color: var(--ink-3); font-variant-numeric: tabular-nums; min-width: 38px; text-align: center; }
+.pagelbl { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; padding: 0 4px; }
+.tdiv { width: 1px; height: 18px; background: var(--line); }
+
+/* ---------------- Left: answer sheet ---------------- */
+.sheet-scroll {
+  flex: 1; overflow: auto; scroll-behavior: smooth;
+  background: #FAFAFA;
+  padding: 28px 24px;
+  display: flex; justify-content: center;
+}
+.sheet-zoom { transform-origin: top center; width: min(620px, 100%); transition: transform .18s ease; }
+.sheet {
+  background-color: #fff;
+  border-radius: 10px;
+  padding: 30px 36px 34px;
+  box-shadow: var(--shadow-doc);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 30px, #F5F5F6 30px 31px);
+  background-position: 0 74px;
+}
+.sheet-hdr {
+  display: flex; justify-content: space-between;
+  font-size: 10.5px; font-weight: 500; color: var(--ink-4);
+  letter-spacing: .05em; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line); margin-bottom: 20px;
+}
+.q-mark { display: flex; align-items: baseline; justify-content: space-between; margin: 4px 0 14px; }
+.q-mark .q { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+.qpts { font-size: 12px; font-weight: 500; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.qpts .of { color: var(--ink-4); }
+.hand { font-family: var(--hand); font-size: 21px; font-weight: 500; line-height: 34px; color: #374151; }
+.hand .hl {
+  background: var(--accent-soft); color: var(--accent-strong);
+  border-radius: 4px; padding: 0 2px;
+}
+.sheet-note { display: flex; justify-content: flex-end; margin-top: 28px; }
+.score-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; font-weight: 600; letter-spacing: .02em;
+  padding: 6px 11px; border-radius: 999px;
+}
+.score-pill b { font-weight: 700; font-variant-numeric: tabular-nums; }
+.score-pill.suggest { background: var(--accent-soft); color: var(--accent-strong); }
+.score-pill.confirmed { background: var(--success-soft); color: var(--success); }
+.score-pill.review { background: var(--warning-soft); color: var(--warning); }
+
+/* ---------------- Right: evaluation ---------------- */
+.conf { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 500; color: var(--ink-2); }
+.conf .dot { width: 6px; height: 6px; border-radius: 50%; }
+.conf.high .dot { background: var(--success); }
+.conf.low .dot { background: var(--warning); }
+
+.eval-scroll {
+  flex: 1; overflow-y: auto; scroll-behavior: smooth;
+  padding: 22px 24px; display: flex; flex-direction: column; gap: 14px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.eval-swap .card { animation: cardIn .25s ease both; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(5px); } }
+
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.kicker {
+  font-size: 10.5px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--ink-4);
+}
+
+.q-text {
+  font-family: var(--serif);
+  font-size: 17px; font-weight: 500; line-height: 1.5;
+  letter-spacing: -.01em; margin-top: 8px; color: var(--ink);
+}
+.q-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--ink-3); }
+.q-meta .middot { color: var(--ink-4); }
+.q-meta b { font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.model-toggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  padding: 4px 2px; border-radius: 6px;
+  transition: color .15s ease;
+}
+.model-toggle:hover { color: var(--accent-strong); }
+.model-toggle .chev { transition: transform .18s ease; color: var(--ink-4); }
+.model-toggle.open .chev { transform: rotate(180deg); }
+.model-answer {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+  font-family: var(--serif);
+  font-size: 15px; font-weight: 400; line-height: 1.65; color: var(--ink-2);
+}
+
+.rubric { padding: 18px 20px; }
+.crit {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 20px; align-items: start;
+  padding: 14px 0; border-bottom: 1px solid var(--line);
+}
+.crit:last-of-type { border-bottom: none; }
+.crit-name { font-size: 13.5px; font-weight: 600; display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.crit-idx { font-size: 11px; font-weight: 500; color: var(--ink-4); font-variant-numeric: tabular-nums; min-width: 14px; }
+.verify {
+  font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--warning); background: var(--warning-soft);
+  padding: 2px 7px; border-radius: 999px; align-self: center;
+}
+.crit-evidence {
+  display: flex; align-items: baseline; gap: 7px;
+  margin-top: 6px; font-size: 12px; color: var(--ink-3);
+}
+.crit-evidence .icon { width: 13px; height: 13px; color: var(--accent); align-self: center; }
+.crit-evidence .q { color: var(--ink-2); font-style: italic; }
+.crit-note { margin-top: 5px; font-size: 12px; color: var(--ink-3); line-height: 1.5; }
+.crit-note .why { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); margin-right: 6px; }
+
+.crit-ctrl { display: flex; align-items: center; gap: 8px; }
+.stepper {
+  width: 26px; height: 26px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-size: 14px; line-height: 1;
+  display: grid; place-items: center; cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.stepper:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.stepper:active { transform: scale(.94); }
+.pts { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 46px; text-align: center; }
+.pts .of { color: var(--ink-4); font-weight: 500; }
+
+.total-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; padding-top: 14px; margin-top: 2px;
+  border-top: 1px solid var(--line);
+}
+.total-lbl { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.total-src { font-size: 11.5px; color: var(--ink-4); margin-top: 2px; }
+.total-src.edited { color: var(--accent); font-weight: 500; }
+.total-val { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1; font-variant-numeric: tabular-nums; }
+.total-val .of { font-size: 14px; font-weight: 500; color: var(--ink-4); }
+
+.notes-icon-row { display: flex; align-items: center; gap: 8px; }
+.notes-icon-row .pencil { color: var(--ink-4); }
+textarea.note-input {
+  width: 100%; min-height: 92px; resize: vertical; margin-top: 12px;
+  background: var(--surface-2); border: 1px solid transparent; border-radius: 10px;
+  padding: 12px 14px;
+  font-family: inherit; font-size: 13px; line-height: 1.55; color: var(--ink);
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+}
+textarea.note-input::placeholder { color: var(--ink-4); }
+textarea.note-input:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* ---------------- Action bar ---------------- */
+.actionbar {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  padding: 12px 24px 14px;
+}
+.actions { display: flex; gap: 10px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 42px; padding: 0 18px; border-radius: 10px;
+  font-size: 13.5px; font-weight: 600; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease;
+}
+.btn:active { transform: scale(.98); }
+.btn .kbd { font-size: 11px; font-weight: 500; opacity: .65; padding: 1px 6px; border-radius: 5px; background: rgba(255,255,255,.18); }
+.btn-primary { flex: 1; background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-strong); }
+.btn-ghost { flex: 1; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+.btn-ghost:hover { background: var(--surface-2); color: var(--ink); }
+.btn-tone { background: var(--warning-soft); color: var(--warning); }
+.btn-tone:hover { background: #F3E7D3; }
+.status {
+  margin-top: 10px; text-align: center;
+  font-size: 12px; color: var(--ink-3); min-height: 16px;
+  transition: color .2s ease;
+}
+.status.done { color: var(--success); font-weight: 600; }
+
+/* ---------------- Bottom navigation ---------------- */
+.navbar {
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 18px;
+  padding: 10px 24px;
+}
+.nav-caption { font-size: 10.5px; font-weight: 600; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-4); white-space: nowrap; }
+.qnav { display: flex; gap: 8px; flex: 1; overflow-x: auto; padding: 2px 0; }
+.qchip {
+  position: relative;
+  min-width: 42px; height: 36px; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--surface);
+  color: var(--ink-3); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; display: grid; place-items: center;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease;
+  font-variant-numeric: tabular-nums;
+}
+.qchip:hover { border-color: var(--ink-4); color: var(--ink); }
+.qchip.active { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px rgba(79, 70, 229, .1); }
+.qchip .st { position: absolute; top: 4px; right: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+.qchip.done .st { background: var(--success); }
+.qchip.flagged .st { background: var(--warning); }
+
+.footer-right { margin-left: auto; display: flex; align-items: center; gap: 20px; }
+.running { text-align: right; }
+.running .k { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
+.running .v { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin-top: 1px; font-variant-numeric: tabular-nums; }
+.running .v .of { color: var(--ink-4); font-weight: 500; font-size: 12.5px; }
+.review-stat { display: flex; align-items: center; gap: 10px; }
+.review-stat .k { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); }
+.review-stat .v { font-size: 11.5px; font-weight: 600; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.track { width: 96px; height: 4px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.track.mini { width: 56px; }
+.track .fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+@media (max-width: 960px) {
+  .workspace { flex-direction: column; }
+  .pane-left { flex: none; border-right: none; border-bottom: 1px solid var(--line); height: 46vh; }
+  .pane-right { flex: 1; }
+  .candidate, .shortcuts { display: none; }
+  .sheet-scroll { padding: 16px; }
+  .eval-scroll { padding: 14px; }
+}
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-name">Evaluation <span class="lt">Workspace</span></div>
+      <div class="brand-sub">Assisted marking</div>
+    </div>
+    <div class="candidate">
+      <div class="vsep"></div>
+      <div class="fld">Paper <b>Data Structures — Mid-Sem</b></div>
+      <span class="pill-id">SEAT C0417</span>
+    </div>
+    <div class="shortcuts">
+      <span class="kbd"><b>A</b> confirm</span>
+      <span class="kbd"><b>F</b> flag</span>
+      <span class="kbd"><b>← →</b> questions</span>
+    </div>
+  </header>
+
+  <div class="workspace">
+
+    <section class="pane pane-left">
+      <div class="pane-toolbar">
+        <div class="pane-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+          Answer sheet
+        </div>
+        <div class="controls">
+          <div class="control-group">
+            <button class="icobtn" id="zoomOut" title="Zoom out" aria-label="Zoom out">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M8 11h6"/></svg>
+            </button>
+            <span class="zoomval" id="zoomVal">100%</span>
+            <button class="icobtn" id="zoomIn" title="Zoom in" aria-label="Zoom in">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>
+            </button>
+          </div>
+          <div class="tdiv"></div>
+          <div class="control-group">
+            <button class="icobtn" id="pgPrev" title="Previous page" aria-label="Previous page">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <span class="pagelbl" id="pageLabel">p. 3 / 8</span>
+            <button class="icobtn" id="pgNext" title="Next page" aria-label="Next page">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="sheet-scroll" id="sheetScroll">
+        <div class="sheet-zoom">
+          <div class="sheet" id="sheet">
+            <div class="sheet-hdr">
+              <span>SEAT No. C0417</span>
+              <span>Data Structures — Mid-Sem</span>
+              <span>Page 3</span>
+            </div>
+            <div id="sheetBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pane pane-right">
+      <div class="pane-toolbar">
+        <div class="pane-title">Suggested evaluation</div>
+        <div class="controls">
+          <span class="conf" id="confBadge"><span class="dot"></span><span id="confLabel">High confidence</span></span>
+        </div>
+      </div>
+
+      <div class="eval-scroll" id="evalScroll">
+
+        <article class="card">
+          <div class="card-head">
+            <span class="kicker" id="qNo">Question 3</span>
+          </div>
+          <div class="q-text" id="qText"></div>
+          <div class="q-meta">
+            <span><b id="qMax">6</b> marks</span>
+            <span class="middot">·</span>
+            <span><b id="qRubricN">3</b> criteria</span>
+            <span class="middot">·</span>
+            <span>rubric-grounded</span>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <span class="kicker">Model answer</span>
+            <button class="model-toggle" id="modelToggle">Show
+              <svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div>
+          <div class="model-answer" id="modelAnswer" hidden></div>
+        </article>
+
+        <article class="card rubric">
+          <div class="card-head">
+            <span class="kicker">Rubric evaluation</span>
+          </div>
+          <div id="rubricRows"></div>
+          <div class="total-row">
+            <div>
+              <div class="total-lbl">Total</div>
+              <div class="total-src" id="scoreSrc">Suggested · not yet confirmed</div>
+            </div>
+            <div class="total-val tab"><span id="qScore">5</span><span class="of"> / <span id="qScoreMax">6</span></span></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="notes-icon-row">
+            <svg class="icon pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span class="kicker">Teacher note</span>
+          </div>
+          <textarea class="note-input" id="notesInput" placeholder="Add a private note for the student or for your records…"></textarea>
+        </article>
+
+      </div>
+
+      <div class="actionbar">
+        <div class="actions">
+          <button class="btn btn-primary" id="btnAccept">Confirm marks <span class="kbd">A</span></button>
+          <button class="btn btn-ghost" id="btnAdjust">Adjust marks</button>
+          <button class="btn btn-tone" id="btnFlag">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 21V4"/><path d="M6 4l13-1v12l-13 1"/></svg>
+            Flag <span class="kbd">F</span>
+          </button>
+        </div>
+        <div class="status" id="statusLine">Suggested marks are ready to review — confirm, adjust, or flag in a few seconds.</div>
+      </div>
+    </section>
+  </div>
+
+  <nav class="navbar">
+    <span class="nav-caption">Questions</span>
+    <div class="qnav" id="qnav"></div>
+    <div class="footer-right">
+      <div class="running">
+        <div class="k">Reviewed total</div>
+        <div class="v tab"><span id="sheetScore">0</span><span class="of"> / <span id="sheetMax">0</span></span></div>
+      </div>
+      <div class="review-stat">
+        <span class="k">Review</span>
+        <div class="track mini"><div class="fill" id="progFill"></div></div>
+        <span class="v tab" id="reviewLabel">0 of 5</span>
+      </div>
+    </div>
+  </nav>
+
+<script>
+  const EVID_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.6" fill="currentColor"/></svg>';
+  const CHECK_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+
+  const questions = [
+    {
+      no: 1, max: 4, confidence: "high",
+      text: "Define a stack and state its two core operations.",
+      model: "A stack is a linear data structure that follows Last-In-First-Out (LIFO): the last element pushed is the first popped. Its two operations are push (insert on top) and pop (remove the top). Both run in O(1).",
+      answer: `A stack is a linear data structure that follows the
+LIFO principle — Last In, First Out. The element added
+last is the one removed first.
+The two main operations are:
+ push() — to add an element on top
+ pop()  — to remove the top element.`,
+      marks: [
+        { name: "Correct definition (LIFO)", max: 2, awarded: 2, evidence: "LIFO principle", note: "States the LIFO principle and linear structure correctly." },
+        { name: "Core operations named", max: 2, awarded: 2, evidence: "push()", note: "push and pop both identified with correct behaviour." }
+      ]
+    },
+    {
+      no: 2, max: 5, confidence: "high",
+      text: "Write the recurrence relation for binary search and state its time complexity.",
+      model: "Recurrence: T(n) = T(n/2) + O(1), with base case T(1) = O(1). Solving by repeated substitution (or the master method) gives T(n) = O(log n).",
+      answer: `Binary search divides the array in half each time.
+Recurrence:  T(n) = T(n/2) + O(1)
+Solving this gives  T(n) = O(log n).
+So the time complexity is logarithmic.`,
+      marks: [
+        { name: "Recurrence relation", max: 2, awarded: 2, evidence: "T(n) = T(n/2) + O(1)", note: "Correct recurrence stated." },
+        { name: "Solution / derivation", max: 2, awarded: 1, weak: true, note: "Final result given but the step-by-step solving is missing." },
+        { name: "Final complexity", max: 1, awarded: 1, evidence: "O(log n)", note: "O(log n) stated correctly." }
+      ]
+    },
+    {
+      no: 3, max: 6, confidence: "high",
+      text: "Explain how a hash collision occurs and describe one resolution technique.",
+      model: "A collision occurs when two distinct keys map to the same bucket index. Chaining resolves this by storing a linked list at each bucket; colliding keys are appended, and lookup cost becomes O(1 + load factor).",
+      answer: `A hash collision happens when two different keys
+produce the same index after hashing. Since one slot
+cannot hold two values directly, we need a strategy.
+Resolution technique — Chaining:
+each bucket holds a linked list, and colliding keys
+are appended to the list at that index.`,
+      marks: [
+        { name: "Cause of collision", max: 2, awarded: 2, evidence: "two different keys", note: "Two distinct keys mapping to the same index — correct." },
+        { name: "Names a valid technique", max: 2, awarded: 2, evidence: "Chaining", note: "Chaining is a valid, correctly named technique." },
+        { name: "Explains the technique", max: 2, awarded: 1, weak: true, evidence: "linked list", note: "Chaining described, but no mention of lookup cost or load factor." }
+      ]
+    },
+    {
+      no: 4, max: 5, confidence: "low",
+      text: "Compare BFS and DFS traversal with one use-case each.",
+      model: "BFS explores level by level using a queue — used for shortest paths in unweighted graphs. DFS explores deep along each branch using a stack/recursion — used for cycle detection and topological sort.",
+      answer: `BFS goes level by level using a queue. DFS goes deep
+first using a stack / recursion.
+BFS -> shortest path in unweighted graph.
+DFS -> ...cycle detection and toplogical sort.`,
+      marks: [
+        { name: "BFS mechanism", max: 1.5, awarded: 1.5, evidence: "level by level", note: "Level-order traversal with a queue — correct." },
+        { name: "DFS mechanism", max: 1.5, awarded: 1.5, evidence: "stack / recursion", note: "Depth-first traversal with stack/recursion — correct." },
+        { name: "Valid use-cases", max: 2, awarded: 1, weak: true, evidence: "shortest path", note: "Handwriting unclear near 'topological' — verify the DFS use-case before accepting." }
+      ]
+    },
+    {
+      no: 5, max: 4, confidence: "high",
+      text: "State one advantage of a linked list over an array.",
+      model: "A linked list uses dynamic memory and can grow or shrink at runtime. Insertions and deletions at a known position require no shifting of subsequent elements, unlike arrays.",
+      answer: `A linked list can grow or shrink at runtime, so it
+uses dynamic memory. Insertion and deletion do not
+need shifting of elements like arrays do.`,
+      marks: [
+        { name: "Valid advantage stated", max: 2, awarded: 2, evidence: "grow or shrink", note: "Dynamic sizing — correct advantage." },
+        { name: "Justification", max: 2, awarded: 2, evidence: "need shifting of elements", note: "No element-shifting on insert/delete — correct justification." }
+      ]
+    }
+  ];
+
+  const state = questions.map(() => ({ status: null, override: null, edited: false, note: "" }));
+  state[0].status = 'done';
+  state[1].status = 'done';
+  let current = 2;
+
+  const $ = id => document.getElementById(id);
+
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function awardedTotal(q, i) {
+    if (state[i].override !== null) return state[i].override;
+    return q.marks.reduce((s, m) => s + m.awarded, 0);
+  }
+
+  function buildAnswer(q) {
+    let text = esc(q.answer);
+    q.marks.forEach(m => {
+      if (!m.evidence) return;
+      const k = esc(m.evidence);
+      const idx = text.indexOf(k);
+      if (idx > -1) {
+        const end = idx + k.length;
+        text = text.slice(0, idx) + '<span class="hl">' + text.slice(idx, end) + '</span>' + text.slice(end);
+      }
+    });
+    return text.split("\n").join("<br>");
+  }
+
+  function renderSheet(q) {
+    const total = awardedTotal(q, current);
+    const st = state[current].status;
+    const pillCls = st === 'done' ? 'confirmed' : (st === 'flagged' ? 'review' : 'suggest');
+    const pillTxt = st === 'done' ? 'Confirmed' : (st === 'flagged' ? 'Review' : 'Suggested');
+    $("sheetBody").innerHTML =
+      '<div class="q-mark"><span class="q">Q' + q.no + '</span>' +
+      '<span class="qpts tab">' + total + ' <span class="of">/ ' + q.max + ' marks</span></span></div>' +
+      '<div class="hand">' + buildAnswer(q) + '</div>' +
+      '<div class="sheet-note"><span class="score-pill ' + pillCls + '">' + CHECK_ICON +
+      ' ' + pillTxt + ' marks <b>' + total + ' / ' + q.max + '</b></span></div>';
+  }
+
+  function renderEval(q) {
+    $("qNo").textContent = "Question " + q.no;
+    $("qText").textContent = q.text;
+    $("qMax").textContent = q.max;
+    $("qRubricN").textContent = q.marks.length;
+    $("qScoreMax").textContent = q.max;
+    $("modelAnswer").textContent = q.model;
+
+    const badge = $("confBadge");
+    if (q.confidence === "low") {
+      badge.className = "conf";
+      badge.querySelector(".dot").style.background = "var(--warning)";
+      $("confLabel").textContent = "Needs a closer look";
+    } else {
+      badge.className = "conf";
+      badge.querySelector(".dot").style.background = "var(--success)";
+      $("confLabel").textContent = "High confidence";
+    }
+
+    let rows = "";
+    q.marks.forEach((m, mi) => {
+      const weak = m.weak ? '<span class="verify">Verify</span>' : '';
+      const ev = m.evidence
+        ? '<div class="crit-evidence">' + EVID_ICON + '<span class="q">“‘' + esc(m.evidence) + '’”</span></div>'
+        : '';
+      rows +=
+        '<div class="crit' + (m.weak ? ' weak' : '') + '">' +
+          '<div class="crit-main">' +
+            '<div class="crit-name"><span class="crit-idx">' + (mi + 1) + '</span>' + esc(m.name) + weak + '</div>' +
+            ev +
+            '<div class="crit-note"><span class="why">Why</span>' + esc(m.note) + '</div>' +
+          '</div>' +
+          '<div class="crit-ctrl">' +
+            '<button class="stepper" data-mi="' + mi + '" data-d="-1" aria-label="Decrease mark">−</button>' +
+            '<span class="pts tab">' + m.awarded + '<span class="of"> / ' + m.max + '</span></span>' +
+            '<button class="stepper" data-mi="' + mi + '" data-d="1" aria-label="Increase mark">+</button>' +
+          '</div>' +
+        '</div>';
+    });
+    $("rubricRows").innerHTML = rows;
+
+    $("rubricRows").querySelectorAll(".stepper").forEach(b => {
+      b.addEventListener("click", () => {
+        const mi = +b.dataset.mi, d = +b.dataset.d;
+        const m = q.marks[mi];
+        const step = (m.max % 1 !== 0) ? 0.5 : 1;
+        m.awarded = Math.max(0, Math.min(m.max, +(m.awarded + d * step).toFixed(1)));
+        state[current].override = null;
+        state[current].edited = true;
+        renderAll();
+        setStatus("Adjusted — this question now differs from the suggestion.", false);
+      });
+    });
+
+    const total = awardedTotal(q, current);
+    $("qScore").textContent = total;
+
+    const src = $("scoreSrc");
+    const st = state[current];
+    src.classList.remove("edited");
+    if (st.status === 'done') {
+      src.textContent = st.edited ? "Confirmed · edited by you" : "Confirmed by you";
+    } else if (st.status === 'flagged') {
+      src.textContent = "Flagged for a second look";
+    } else {
+      src.textContent = st.edited ? "Edited by you · not yet confirmed" : "Suggested · not yet confirmed";
+    }
+    if (st.edited && st.status === 'done') src.classList.add("edited");
+
+    $("notesInput").value = st.note || "";
+  }
+
+  function renderNav() {
+    let html = "";
+    questions.forEach((q, i) => {
+      const st = state[i].status;
+      const cls = ["qchip"];
+      if (i === current) cls.push("active");
+      if (st === 'done') cls.push("done");
+      if (st === 'flagged') cls.push("flagged");
+      html += '<button class="' + cls.join(' ') + '" data-i="' + i + '">Q' + q.no + '<span class="st"></span></button>';
+    });
+    $("qnav").innerHTML = html;
+    $("qnav").querySelectorAll(".qchip").forEach(c =>
+      c.addEventListener("click", () => { current = +c.dataset.i; renderAll(); }));
+  }
+
+  function renderTotals() {
+    let doneScore = 0, doneMax = 0, reviewed = 0;
+    questions.forEach((q, i) => {
+      if (state[i].status === 'done') {
+        doneMax += q.max;
+        doneScore += awardedTotal(q, i);
+      }
+      if (state[i].status) reviewed++;
+    });
+    $("sheetScore").textContent = +doneScore.toFixed(1);
+    $("sheetMax").textContent = doneMax;
+    $("reviewLabel").textContent = reviewed + " of " + questions.length;
+    $("progFill").style.width = (reviewed / questions.length * 100) + "%";
+  }
+
+  function setStatus(msg, done) {
+    const el = $("statusLine");
+    el.textContent = msg;
+    el.classList.toggle("done", !!done);
+  }
+
+  function renderAll() {
+    const q = questions[current];
+    renderSheet(q);
+    renderEval(q);
+    renderNav();
+    renderTotals();
+    $("sheetScroll").scrollTop = 0;
+    $("evalScroll").scrollTop = 0;
+    const es = $("evalScroll");
+    es.classList.remove("eval-swap");
+    void es.offsetWidth;
+    es.classList.add("eval-swap");
+    const st = state[current].status;
+    if (st === 'done') setStatus("Confirmed. Use → to move to the next question.", true);
+    else if (st === 'flagged') setStatus("Flagged for a second look. You can revisit it anytime.", false);
+    else setStatus("Suggested marks are ready — confirm, adjust, or flag.", false);
+  }
+
+  let zoom = 1;
+  function setZoom(d) {
+    zoom = Math.min(1.6, Math.max(0.7, +(zoom + d).toFixed(2)));
+    $("sheet").style.transform = "scale(" + zoom + ")";
+    $("zoomVal").textContent = Math.round(zoom * 100) + "%";
+  }
+
+  let page = 3, totalPages = 8;
+  function renderPage() { $("pageLabel").textContent = "p. " + page + " / " + totalPages; }
+
+  $("zoomIn").addEventListener("click", () => setZoom(0.15));
+  $("zoomOut").addEventListener("click", () => setZoom(-0.15));
+  $("pgPrev").addEventListener("click", () => { page = Math.max(1, page - 1); renderPage(); });
+  $("pgNext").addEventListener("click", () => { page = Math.min(totalPages, page + 1); renderPage(); });
+
+  $("modelToggle").addEventListener("click", () => {
+    const b = $("modelToggle"), a = $("modelAnswer");
+    const open = a.hidden;
+    a.hidden = !open;
+    b.classList.toggle("open", open);
+    b.innerHTML = (open ? "Hide" : "Show") +
+      '<svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
+  });
+
+  $("notesInput").addEventListener("input", e => {
+    state[current].note = e.target.value;
+  });
+
+  $("btnAccept").addEventListener("click", () => {
+    state[current].status = 'done';
+    renderAll();
+    setStatus("Confirmed. Use → to move to the next question.", true);
+  });
+
+  $("btnAdjust").addEventListener("click", () => {
+    $("evalScroll").scrollTop = $("rubricRows").offsetTop - 8;
+    setStatus("Use the − / + controls on each criterion to adjust marks.", false);
+  });
+
+  $("btnFlag").addEventListener("click", () => {
+    state[current].status = 'flagged';
+    renderAll();
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.target.tagName === "TEXTAREA") return;
+    if (e.key === "a" || e.key === "A") $("btnAccept").click();
+    else if (e.key === "f" || e.key === "F") $("btnFlag").click();
+    else if (e.key === "ArrowRight") { if (current === questions.length - 1) return; current++; renderAll(); }
+    else if (e.key === "ArrowLeft") { if (current === 0) return; current--; renderAll(); }
+  });
+
+  renderAll();
+</script>
+</body>
+</html>
