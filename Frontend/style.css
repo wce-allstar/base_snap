@@ -1737,6 +1737,46 @@ select.form-control option { color: var(--ink); }
 .ws2-brand-sub { font-size: 11.5px; color: var(--ink-4); margin-top: 1px; white-space: nowrap; }
 .ws2-candidate { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .ws2-vsep { width: 1px; height: 18px; background: var(--line); }
+.ws2-student-switcher {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px 4px;
+}
+.ws2-nav-student-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  font-size: 10.5px;
+  transition: background .15s ease, color .15s ease;
+}
+.ws2-nav-student-btn:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-doc);
+}
+.ws2-nav-student-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.ws2-student-idx {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding: 0 5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .ws2-fld { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
 .ws2-fld b { color: var(--ink); font-weight: 600; }
 .ws2-pill {
@@ -1895,18 +1935,87 @@ select.form-control option { color: var(--ink); }
 .ws2-crit-note { margin-top: 5px; font-size: 12px; color: var(--ink-3); line-height: 1.5; }
 .ws2-crit-note .why { font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); margin-right: 6px; }
 
-.ws2-crit-ctrl { display: flex; align-items: center; gap: 8px; }
+.ws2-crit-ctrl { display: flex; align-items: center; gap: 6px; }
 .ws2-stepper {
-  width: 26px; height: 26px; border-radius: 8px;
+  width: 28px; height: 28px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--surface);
-  color: var(--ink-3); font-size: 14px; line-height: 1;
+  color: var(--ink-3); font-size: 15px; font-weight: 700; line-height: 1;
   display: grid; place-items: center; cursor: pointer;
   transition: border-color .15s ease, color .15s ease, background .15s ease;
 }
 .ws2-stepper:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .ws2-stepper:active { transform: scale(.94); }
-.ws2-pts { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 46px; text-align: center; }
-.ws2-pts .ws2-of { color: var(--ink-4); font-weight: 500; }
+
+.ws2-pts-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 3px 7px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.ws2-pts-input-wrap:focus-within {
+  border-color: var(--ink);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.08);
+}
+.ws2-crit-input {
+  width: 38px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+.ws2-crit-input::-webkit-outer-spin-button,
+.ws2-crit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ws2-pts-input-wrap .ws2-of {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-4);
+  user-select: none;
+}
+
+.ws2-step-ctrl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 2px 7px;
+}
+.ws2-step-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-3);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.ws2-step-select {
+  padding: 1px 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+.ws2-step-select:focus {
+  border-color: var(--ink);
+}
 
 .ws2-total-row {
   display: flex; align-items: flex-end; justify-content: space-between;
@@ -1953,6 +2062,28 @@ textarea.ws2-note:focus { outline: none; background: #fff; border-color: var(--a
 .ws2-btn-ghost:hover { background: var(--surface-2); color: var(--ink); }
 .ws2-btn-tone { flex: 1; min-width: 100px; background: var(--warning-soft); color: var(--warning); border: 1px solid transparent; }
 .ws2-btn-tone:hover { background: #F3E7D3; }
+.ws2-btn-next-student {
+  flex: 1.2;
+  min-width: 145px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--line);
+  color: var(--ink);
+  font-weight: 600;
+}
+.ws2-btn-next-student:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--ink-2);
+  color: var(--ink);
+}
+.ws2-btn-next-student:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ws2-btn-next-student .ws2-kbd {
+  background: var(--line);
+  color: var(--ink);
+  border: none;
+}
 .ws2-status {
   margin-top: 10px; text-align: center;
   font-size: 12px; color: var(--ink-3); min-height: 16px;
@@ -2004,3 +2135,168 @@ textarea.ws2-note:focus { outline: none; background: #fff; border-color: var(--a
   .ws2-sheet-scroll { padding: 16px; }
   .ws2-eval-scroll { padding: 14px; }
 }
+
+/* ========================================================
+   DIFFICULTY LEVEL SELECTOR & BADGES
+   ======================================================== */
+.difficulty-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.diff-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.5rem;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  text-align: center;
+  position: relative;
+  user-select: none;
+}
+
+.diff-btn:hover {
+  background: var(--surface-2);
+  border-color: var(--ink-4);
+}
+
+.diff-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-bottom: 0.25rem;
+}
+.diff-dot.easy { background: var(--success); }
+.diff-dot.medium { background: var(--warning); }
+.diff-dot.hard { background: var(--error); }
+
+.diff-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.diff-sub {
+  font-size: 0.68rem;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+
+.diff-btn.active.easy {
+  background: var(--success-soft);
+  border-color: var(--success);
+}
+.diff-btn.active.easy .diff-title {
+  color: var(--success);
+}
+
+.diff-btn.active.medium {
+  background: var(--warning-soft);
+  border-color: var(--warning);
+}
+.diff-btn.active.medium .diff-title {
+  color: var(--warning);
+}
+
+.diff-btn.active.hard {
+  background: var(--error-soft);
+  border-color: var(--error);
+}
+.diff-btn.active.hard .diff-title {
+  color: var(--error);
+}
+
+.difficulty-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+.difficulty-hint i {
+  color: var(--ink-2);
+}
+
+/* Badges for tables and workspace */
+.badge-difficulty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.badge-difficulty.easy {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.badge-difficulty.medium {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.badge-difficulty.hard {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+/* Workspace difficulty controls */
+.ws2-diff-switch-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-right: 0.5rem;
+}
+.ws2-diff-select {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  outline: none;
+}
+.ws2-diff-select:focus {
+  border-color: var(--ink);
+}
+.ws2-recheck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: var(--ink);
+  color: #FFFFFF;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition-speed);
+}
+.ws2-recheck-btn:hover {
+  opacity: 0.85;
+}
+.ws2-pill-diff {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+

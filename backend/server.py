@@ -24,12 +24,18 @@ except ImportError:
 # Current model used by the real AI evaluation pipeline.
 DEFAULT_EVAL_MODEL = "gemini-3.5-flash"
 
-app = Flask(__name__, static_folder='.', static_url_path='')
-CORS(app)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, '..'))
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, 'Frontend')
+if not os.path.exists(FRONTEND_DIR):
+    FRONTEND_DIR = BASE_DIR
 
-DB_PATH = 'db.json'
-UPLOAD_FOLDER = 'uploads'
+DB_PATH = os.path.join(BASE_DIR, 'db.json')
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+app = Flask(__name__, static_folder=FRONTEND_DIR, static_url_path='')
+CORS(app)
 
 # ---------------------------------------------------------
 # MOCK DATABASE INITIAL SEED
@@ -39,12 +45,13 @@ INITIAL_STUDENTS = [
     "id": "CS2026-084",
     "name": "Amit Patel",
     "format": "Scanned PDF (Handwritten)",
-    "aiScore": 32.5,
-    "maxScore": 50,
+    "aiScore": 15.5,
+    "maxScore": 20,
     "confidence": 89,
     "status": "Pending Review",
     "selfCheck": "Consistent",
     "handwritingQuality": "Average",
+    "difficulty": "medium",
     "questions": {
       "q1": {
         "score": 7.5,
@@ -84,12 +91,13 @@ INITIAL_STUDENTS = [
     "id": "CS2026-003",
     "name": "Priya Sharma",
     "format": "Digital Upload (Typed)",
-    "aiScore": 44.0,
-    "maxScore": 50,
+    "aiScore": 18.5,
+    "maxScore": 20,
     "confidence": 96,
     "status": "Pending Review",
     "selfCheck": "Consistent",
     "handwritingQuality": "Not Applicable",
+    "difficulty": "medium",
     "questions": {
       "q1": {
         "score": 9.5,
@@ -127,16 +135,17 @@ INITIAL_STUDENTS = [
     "id": "CS2026-112",
     "name": "Rahul Verma",
     "format": "Scanned PDF (Handwritten)",
-    "aiScore": 18.5,
-    "maxScore": 50,
+    "aiScore": 7.5,
+    "maxScore": 20,
     "confidence": 76,
     "status": "Pending Review",
     "selfCheck": "Flagged: Low Confidence",
     "handwritingQuality": "Poor / Scrawly",
+    "difficulty": "medium",
     "questions": {
       "q1": {
         "score": 4.0,
-        "maxScore: 10": 10,
+        "maxScore": 10,
         "ocrText": "BST is a tree which is binary and has search property. Values on left are small and values on right are large.\n        \nSearch complexity:\nNormally it is O(log N). If bad, it can be O(N).\nAVL trees help balance it.",
         "handwritingMock": "BST is a binary tree.\nLeft elements < Root < Right elements.\n\nSearch is O(log N). Worst case O(N) when it is flat.\nAVL trees balance it.",
         "strengths": [
@@ -331,7 +340,7 @@ if "logs" not in db or not db["logs"]["extractor"]:
 # ---------------------------------------------------------
 @app.route('/')
 def index_route():
-    return app.send_static_file('index.html')
+    return send_from_directory(FRONTEND_DIR, 'index.html')
 
 # API: Auth Mock Login
 @app.route('/api/login', methods=['POST'])
@@ -447,15 +456,12 @@ def api_approve_grade():
         student['status'] = "Approved"
         
         # update question scores
-        total = 0
         for qid, qscore in q_scores.items():
             if qid in student['questions']:
                 student['questions'][qid]['score'] = float(qscore)
-                total += float(qscore)
                 
-        # calculate dummy scale for missing questions Q3-Q5
-        original_offset = student['aiScore'] - (student['questions']['q1']['score'] + student['questions']['q2']['score'])
-        student['aiScore'] = float(round(total + original_offset, 1))
+        student['aiScore'] = float(round(sum(q.get('score', 0) for q in student['questions'].values()), 1))
+        student['maxScore'] = sum(q.get('maxScore', 10) for q in student['questions'].values())
         
         if comments.strip():
             student['selfCheck'] = "Manually Overridden"
@@ -541,6 +547,8 @@ def api_upload_script():
         except Exception as e:
             extracted_text = f"Error extracting text from PDF: {str(e)}"
             
+    difficulty = request.form.get('difficulty', 'medium') or 'medium'
+    
     # Add temporary student placeholder
     temp_id = f"CS2026-00{len(db['students']) + 10}"
     new_student = {
@@ -548,11 +556,12 @@ def api_upload_script():
         "name": filename.split('_')[0] if '_' in filename else "Uploaded Script",
         "format": "Scanned PDF" if filename.lower().endswith('.pdf') else "Scanned Image",
         "aiScore": 0.0,
-        "maxScore": 50,
+        "maxScore": 20,
         "confidence": 80,
         "status": "Awaiting Pipeline",
         "selfCheck": "Awaiting Ingest",
         "handwritingQuality": "Analyzing...",
+        "difficulty": difficulty,
         "questionPaperId": linked_paper['id'] if linked_paper else "",
         "questionPaper": linked_paper['name'] if linked_paper else "",
         "questions": {
@@ -582,7 +591,7 @@ def api_upload_script():
     append_log('extractor', f"Uploaded script '{filename}' saved and segmented.", 'info')
     return jsonify({"status": "success", "studentId": temp_id})
 
-def run_mock_pipeline(student, paper_name, db):
+def run_mock_pipeline(student, paper_name, db, difficulty="medium"):
     """Simulated evaluation used when no API key is configured (or AI fails)."""
     time.sleep(0.5)  # small lag
     append_log('extractor', "Running OCR segment HWR text extraction...", 'info')
@@ -593,42 +602,128 @@ def run_mock_pipeline(student, paper_name, db):
     append_log('mapper', "Calculating semantic match similarity distance...", 'info')
     append_log('mapper', "Rubric Mapper matched 3 key conceptual definitions (Confidence: 89%).", 'success')
 
-    append_log('reasoner', "Trace: building logical AST for pseudocode node...", 'info')
-    append_log('reasoner', "Reasoner logic warning: missing duplicate checks in BST insert.", 'warn')
+    append_log('reasoner', f"Trace: auditing logic against [{difficulty.upper()}] difficulty constraints...", 'info')
+    if difficulty == 'easy':
+        append_log('reasoner', "Reasoner (Easy mode): Minor syntax flaws & duplicate checks forgiven.", 'info')
+    elif difficulty == 'hard':
+        append_log('reasoner', "Reasoner (Hard mode): Strict penalty applied for omitted duplicate check and missing balance factor formula.", 'warn')
+    else:
+        append_log('reasoner', "Reasoner logic warning: missing duplicate checks in BST insert.", 'warn')
 
-    append_log('grader', "Synthesizing scores based on coverage...", 'info')
-    append_log('grader', "Grader assigns Q1: 8.0/10, Q2: 7.0/10. Synthesis justification formulated.", 'success')
+    append_log('grader', f"Synthesizing scores using [{difficulty.upper()}] strictness rubric...", 'info')
 
-    append_log('checker', "Comparing cohort standard deviation metrics...", 'info')
-    append_log('checker', "Drift alert: 0 outliers detected. Scores are consistent with cohort.", 'success')
-
-    # Populate student with realistic graded parameters
     student['status'] = "Pending Review"
     student['selfCheck'] = "Consistent"
-    student['confidence'] = 88
-    student['handwritingQuality'] = "Good"
-    student['aiScore'] = 35.0
+    student['difficulty'] = difficulty
 
-    student['questions'] = {
-        "q1": {
-            "score": 8.0,
-            "maxScore": 10,
-            "ocrText": "A Binary Search Tree is a binary tree with ordering. Left is smaller, right is larger. Average case is O(log n) height, worst case O(n) when elements sorted. AVL trees rotate to fix balancing.",
-            "handwritingMock": "Student HWR definitions: left < root < right. AVL balances O(log n) height.",
-            "strengths": ["Correct node definition hierarchy", "Identifies average vs worst complexities"],
-            "weaknesses": ["AVL equation details missed"],
-            "justification": "Accurate BST properties and complexity analysis. Rotations mentioned. Grade 8.0/10."
-        },
-        "q2": {
-            "score": 7.0,
-            "maxScore": 10,
-            "ocrText": "insert(Node root, val) { if (root==null) return new Node(val) ... } Time O(h), space O(h)",
-            "handwritingMock": "insert code structure recursive correct.",
-            "strengths": ["Standard structure perfect"],
-            "weaknesses": ["No duplicates validation branch"],
-            "justification": "Syntactically correct recursive structure. Time/Space matches O(h). Grade 7.0/10."
+    student['maxScore'] = sum(q.get('maxScore', 10) for q in student['questions'].values()) if 'questions' in student else 20
+
+    if difficulty == 'easy':
+        student['confidence'] = 93
+        student['handwritingQuality'] = "Good"
+        student['aiScore'] = 18.5
+        append_log('grader', "Grader (Easy Mode) assigns Q1: 9.5/10, Q2: 9.0/10. Generous partial marks awarded.", 'success')
+        student['questions'] = {
+            "q1": {
+                "score": 9.5,
+                "maxScore": 10,
+                "ocrText": "A Binary Search Tree is a binary tree with ordering. Left is smaller, right is larger. Average case is O(log n) height, worst case O(n) when elements sorted. AVL trees rotate to fix balancing.",
+                "handwritingMock": "Student HWR definitions: left < root < right. AVL balances O(log n) height.",
+                "strengths": [
+                    "Clear BST ordering definition",
+                    "Accurate complexity identification (O(log N) & O(N))",
+                    "Understands height-balancing rotation principle"
+                ],
+                "weaknesses": [
+                    "Minor: Mathematical formula for AVL factor omitted (forgiven under lenient check)"
+                ],
+                "justification": "Lenient (Easy) Evaluation: Student demonstrates solid conceptual grasp of Binary Search Trees and dynamic balancing. Minor formula omission forgiven under lenient checking. Marks: 9.5/10."
+            },
+            "q2": {
+                "score": 9.0,
+                "maxScore": 10,
+                "ocrText": "insert(Node root, val) { if (root==null) return new Node(val) ... } Time O(h), space O(h)",
+                "handwritingMock": "insert code structure recursive correct.",
+                "strengths": [
+                    "Clean, working recursive insertion algorithm",
+                    "Correct time & space complexity stated as O(h)"
+                ],
+                "weaknesses": [
+                    "Duplicate keys branch omitted (acceptable under lenient criteria)"
+                ],
+                "justification": "Lenient (Easy) Evaluation: Recursive insert structure is clean and syntactically sound. Standard complexities are correct. Marks: 9.0/10."
+            }
         }
-    }
+    elif difficulty == 'hard':
+        student['confidence'] = 84
+        student['handwritingQuality'] = "Average"
+        student['aiScore'] = 11.5
+        append_log('grader', "Grader (Hard Mode) assigns Q1: 6.0/10, Q2: 5.5/10. Strict deductions applied.", 'success')
+        student['questions'] = {
+            "q1": {
+                "score": 6.0,
+                "maxScore": 10,
+                "ocrText": "A Binary Search Tree is a binary tree with ordering. Left is smaller, right is larger. Average case is O(log n) height, worst case O(n) when elements sorted. AVL trees rotate to fix balancing.",
+                "handwritingMock": "Student HWR definitions: left < root < right. AVL balances O(log n) height.",
+                "strengths": [
+                    "Base BST left < node < right property correctly noted",
+                    "States worst-case degeneration to O(N)"
+                ],
+                "weaknesses": [
+                    "Failed to provide formal AVL balance factor formula |h_L - h_R| <= 1",
+                    "Did not specify rotation types (LL, RR, LR, RL)",
+                    "Vague explanation of tree degeneration cause"
+                ],
+                "justification": "Strict (Hard) Evaluation: While basic properties are present, the answer lacks academic rigor. Exact mathematical balance condition and concrete rotation proofs were missing. Heavy deduction applied. Marks: 6.0/10."
+            },
+            "q2": {
+                "score": 5.5,
+                "maxScore": 10,
+                "ocrText": "insert(Node root, val) { if (root==null) return new Node(val) ... } Time O(h), space O(h)",
+                "handwritingMock": "insert code structure recursive correct.",
+                "strengths": [
+                    "Recursive template present",
+                    "States time and space complexities"
+                ],
+                "weaknesses": [
+                    "Missing duplicate key validation or collision strategy",
+                    "No memory allocation check or base-pointer validation",
+                    "Incomplete space complexity explanation for recursive stack frames"
+                ],
+                "justification": "Strict (Hard) Evaluation: Pseudo-code fails to address duplicate key edge cases and lacks memory safety checks. Space complexity derivation is underspecified. Marks: 5.5/10."
+            }
+        }
+    else:  # 'medium'
+        student['confidence'] = 88
+        student['handwritingQuality'] = "Good"
+        student['aiScore'] = 15.0
+        append_log('grader', "Grader (Medium Mode) assigns Q1: 8.0/10, Q2: 7.0/10. Standard rubric applied.", 'success')
+        student['questions'] = {
+            "q1": {
+                "score": 8.0,
+                "maxScore": 10,
+                "ocrText": "A Binary Search Tree is a binary tree with ordering. Left is smaller, right is larger. Average case is O(log n) height, worst case O(n) when elements sorted. AVL trees rotate to fix balancing.",
+                "handwritingMock": "Student HWR definitions: left < root < right. AVL balances O(log n) height.",
+                "strengths": ["Correct node definition hierarchy", "Identifies average vs worst complexities"],
+                "weaknesses": ["AVL equation details missed"],
+                "justification": "Standard (Medium) Evaluation: Accurate BST properties and complexity analysis. Rotations mentioned. Grade 8.0/10."
+            },
+            "q2": {
+                "score": 7.0,
+                "maxScore": 10,
+                "ocrText": "insert(Node root, val) { if (root==null) return new Node(val) ... } Time O(h), space O(h)",
+                "handwritingMock": "insert code structure recursive correct.",
+                "strengths": ["Standard structure perfect"],
+                "weaknesses": ["No duplicates validation branch"],
+                "justification": "Standard (Medium) Evaluation: Syntactically correct recursive structure. Time/Space matches O(h). Grade 7.0/10."
+            }
+        }
+
+    student['aiScore'] = float(round(sum(q.get('score', 0) for q in student['questions'].values()), 1))
+    student['maxScore'] = sum(q.get('maxScore', 10) for q in student['questions'].values())
+
+    append_log('checker', "Comparing cohort standard deviation metrics...", 'info')
+    append_log('checker', f"Drift alert: 0 outliers detected. Scores consistent with [{difficulty.upper()}] difficulty benchmark.", 'success')
 
     save_db(db)
     return jsonify({"status": "success", "student": student})
@@ -640,6 +735,9 @@ def api_evaluate_script():
     data = request.json or {}
     student_id = data.get('studentId')
     question_paper_id = data.get('questionPaperId') or ''
+    difficulty = str(data.get('difficulty', 'medium')).lower().strip()
+    if difficulty not in ['easy', 'medium', 'hard']:
+        difficulty = 'medium'
     
     db = load_db()
     students = db.get('students', [])
@@ -649,6 +747,7 @@ def api_evaluate_script():
         return jsonify({"status": "error", "message": "Student not found"}), 404
         
     student = students[idx]
+    student['difficulty'] = difficulty
     settings = db.get('settings', {})
     api_key = settings.get('geminiApiKey', '')
 
@@ -659,14 +758,14 @@ def api_evaluate_script():
         student['questionPaper'] = linked_paper['name']
     paper_name = linked_paper['name'] if linked_paper else (student.get('questionPaper') or 'Default rubric v3')
     
-    append_log('extractor', f"Starting processing trail for student {student['name']}...", 'info')
+    append_log('extractor', f"Starting processing trail for student {student['name']} under [{difficulty.upper()}] grading difficulty...", 'info')
     
     # ---------------------------------------------------------
     # MOCK SIMULATOR RUN
     # ---------------------------------------------------------
     # If no key, we run our extremely detailed high-fidelity mock engine
     if not api_key or not HAS_GEMINI:
-        return run_mock_pipeline(student, paper_name, db)
+        return run_mock_pipeline(student, paper_name, db, difficulty=difficulty)
         
     # ---------------------------------------------------------
     # REAL AI GEMINI AGENT PIPELINE RUN
@@ -687,6 +786,13 @@ def api_evaluate_script():
         # We fetch the prompt setups from the DB config
         prompts = db.get('agent_prompts', {})
         
+        difficulty_rules = {
+            'easy': "GRADING RIGOR LEVEL: EASY (LENIENT).\n- Focus on core conceptual understanding.\n- Award generous partial credit for good faith attempts.\n- Forgive minor syntax errors, informal wording, or omitted edge cases (like duplicate handling).\n- Be encouraging and constructive in justification feedback.",
+            'medium': "GRADING RIGOR LEVEL: MEDIUM (STANDARD).\n- Balanced academic evaluation against rubric criteria.\n- Deduct marks proportionately for omissions or incomplete explanations.\n- Provide objective, constructive feedback.",
+            'hard': "GRADING RIGOR LEVEL: HARD (STRICT / RIGOROUS).\n- Apply zero tolerance for informal definitions, vague explanations, or omitted edge cases.\n- Strictly penalize missing mathematical formulas, incomplete proofs, or syntax bugs.\n- Require rigorous precision in complexity analysis and algorithm correctness."
+        }
+        rigor_instruction = difficulty_rules.get(difficulty, difficulty_rules['medium'])
+        
         # 1. Extraction Agent
         append_log('extractor', "Connecting Gemini to run transcription...", 'info')
         ocr_prompt = f"{prompts.get('extractor')}\n\nHere is the raw text content to clean and structure:\n{student['questions']['q1']['ocrText']}"
@@ -701,14 +807,16 @@ def api_evaluate_script():
         append_log('mapper', f"Criteria similarities mapped: {response_map[:100]}...", 'success')
         
         # 3. Reasoning Agent
-        append_log('reasoner', "Analyzing logical code loops...", 'info')
-        reasoner_prompt = f"{prompts.get('reasoner')}\n\nEvaluate code block logic in response:\n{response_ocr}"
+        append_log('reasoner', f"Auditing logic under [{difficulty.upper()}] difficulty constraints...", 'info')
+        reasoner_prompt = f"{prompts.get('reasoner')}\n\n{rigor_instruction}\n\nEvaluate code block logic in response:\n{response_ocr}"
         response_reason = ask(reasoner_prompt)
         append_log('reasoner', "Logic dry run validations compiled.", 'success')
         
         # 4. Grader Agent
-        append_log('grader', "Synthesizing scores...", 'info')
+        append_log('grader', f"Synthesizing scores under [{difficulty.upper()}] difficulty...", 'info')
         grader_prompt = f"""{prompts.get('grader')}
+        
+        {rigor_instruction}
         
         Here are the consolidated reviews from the pipeline:
         - Transcription: {response_ocr}
@@ -738,7 +846,7 @@ def api_evaluate_script():
         
         # 5. Checker Agent
         append_log('checker', "Cross-referencing database grades consistency...", 'info')
-        checker_prompt = f"{prompts.get('checker')}\n\nCheck score: {grade_data.get('q1_score')} + {grade_data.get('q2_score')} against cohort rules."
+        checker_prompt = f"{prompts.get('checker')}\n\nCheck score: {grade_data.get('q1_score')} + {grade_data.get('q2_score')} against cohort rules and [{difficulty.upper()}] rigor."
         response_check = ask(checker_prompt)
         append_log('checker', "Cohort alignment validated.", 'success')
         
@@ -747,6 +855,7 @@ def api_evaluate_script():
         student['selfCheck'] = "Consistent"
         student['confidence'] = grade_data.get('confidence', 90)
         student['handwritingQuality'] = grade_data.get('handwriting_quality', 'Average')
+        student['difficulty'] = difficulty
         
         q1_score = grade_data.get('q1_score', 8.0)
         q2_score = grade_data.get('q2_score', 7.5)
@@ -762,8 +871,8 @@ def api_evaluate_script():
         student['questions']['q2']['justification'] = grade_data.get('q2_justification', '')
         
         # Sum overall score
-        other_offset = student['aiScore'] - (student['questions']['q1']['score'] + student['questions']['q2']['score']) if student['aiScore'] else 15.0
-        student['aiScore'] = float(round(q1_score + q2_score + other_offset, 1))
+        student['aiScore'] = float(round(sum(q.get('score', 0) for q in student['questions'].values()), 1))
+        student['maxScore'] = sum(q.get('maxScore', 10) for q in student['questions'].values())
         
         db['students'] = students
         save_db(db)
@@ -771,12 +880,20 @@ def api_evaluate_script():
         
     except Exception as e:
         append_log('grader', f"Real AI pipe failed: {str(e)}. Falling back to mock evaluation.", 'warn')
-        return run_mock_pipeline(student, paper_name, db)
+        return run_mock_pipeline(student, paper_name, db, difficulty=difficulty)
 
-# Serve static files for directories
+# Serve static files for frontend and uploads
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('.', path)
+    if os.path.exists(os.path.join(FRONTEND_DIR, path)):
+        return send_from_directory(FRONTEND_DIR, path)
+    if os.path.exists(os.path.join(UPLOAD_FOLDER, path)):
+        return send_from_directory(UPLOAD_FOLDER, path)
+    if os.path.exists(os.path.join(PROJECT_ROOT, path)):
+        return send_from_directory(PROJECT_ROOT, path)
+    if os.path.exists(os.path.join(BASE_DIR, path)):
+        return send_from_directory(BASE_DIR, path)
+    return send_from_directory(FRONTEND_DIR, 'index.html')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)

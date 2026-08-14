@@ -10,7 +10,14 @@ let currentStudentIndex = 0;
 let currentQuestionId = "q1"; 
 let uploadProgressInterval = null;
 let questionPapers = [];
-let apiBaseUrl = ""; // empty string is relative paths for same-origin server hosting
+let apiBaseUrl = "http://localhost:8000"; // empty string is relative paths for same-origin server hosting
+let selectedDifficulty = "medium"; // 'easy' | 'medium' | 'hard'
+
+const difficultyHints = {
+  easy: '<i class="fa-solid fa-circle-info text-success"></i> <strong>Lenient grading:</strong> rewards conceptual grasp, grants generous partial marks, forgives minor syntax bugs or missing edge cases.',
+  medium: '<i class="fa-solid fa-circle-info text-warning"></i> <strong>Standard grading:</strong> balanced academic evaluation against rubric criteria with standard proportional deductions.',
+  hard: '<i class="fa-solid fa-circle-info text-danger"></i> <strong>Strict grading:</strong> strict penalty for missing edge cases (duplicates, memory limits) or informal proofs; requires high precision.'
+};
 
 const modelAnswerRubric = {
   q1: {
@@ -81,6 +88,8 @@ const elements = {
   uploadProgressPanel: document.getElementById('upload-progress-panel'),
   uploadItemsContainer: document.getElementById('upload-items-container'),
   cancelUploadBtn: document.getElementById('cancel-upload-btn'),
+  diffBtns: document.querySelectorAll('.diff-btn'),
+  diffHint: document.getElementById('difficulty-hint'),
 
   // Workspace (v2 evaluation workspace)
   ws2StudentName: document.getElementById('ws2StudentName'),
@@ -334,11 +343,22 @@ function renderQueueTable() {
       biasIcon = `<i class="fa-solid fa-triangle-exclamation text-danger"></i> Audit Alert`;
     }
 
+    const diff = student.difficulty || 'medium';
+    let diffIcon = '🟡';
+    let diffText = 'Medium';
+    if (diff === 'easy') { diffIcon = '🟢'; diffText = 'Easy'; }
+    else if (diff === 'hard') { diffIcon = '🔴'; diffText = 'Hard'; }
+    const diffBadge = `<span class="badge-difficulty ${diff}">${diffIcon} ${diffText}</span>`;
+
+    const totalMax = student.maxScore || Object.values(student.questions || {}).reduce((acc, q) => acc + (q.maxScore || 10), 0) || 20;
+    const currentScore = student.aiScore !== undefined ? student.aiScore : Object.values(student.questions || {}).reduce((acc, q) => acc + (q.score || 0), 0);
+
     row.innerHTML = `
       <td><strong>${student.id}</strong></td>
       <td>${student.name}</td>
       <td class="text-muted"><i class="fa-regular fa-file-pdf"></i> ${student.format}</td>
-      <td><strong>${student.aiScore}</strong> / ${student.maxScore}</td>
+      <td>${diffBadge}</td>
+      <td><strong>${currentScore}</strong> / ${totalMax}</td>
       <td><span class="badge ${confidenceClass}">${student.confidence}%</span></td>
       <td class="text-muted" style="max-width: 180px;">${student.questionPaper ? esc(student.questionPaper) : '<span class="text-muted">—</span>'}</td>
       <td>
@@ -380,6 +400,14 @@ function updateHeaderStats() {
 function initUploadLogic() {
   const dropZone = elements.dropZone;
   
+  // Difficulty selector buttons
+  elements.diffBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const diff = btn.getAttribute('data-difficulty');
+      setUploadDifficulty(diff);
+    });
+  });
+
   elements.fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
       handleFilesUpload(e.target.files);
@@ -396,6 +424,19 @@ function initUploadLogic() {
   elements.loadSampleBtn.addEventListener('click', () => {
     simulateOfflineUpload();
   });
+}
+
+function setUploadDifficulty(diff) {
+  selectedDifficulty = diff;
+  elements.diffBtns.forEach(btn => {
+    const bDiff = btn.getAttribute('data-difficulty');
+    const isActive = bDiff === diff;
+    btn.classList.toggle('active', isActive);
+    btn.classList.toggle(bDiff, isActive);
+  });
+  if (elements.diffHint && difficultyHints[diff]) {
+    elements.diffHint.innerHTML = difficultyHints[diff];
+  }
 }
 
 async function handleFilesUpload(filesList) {
@@ -427,6 +468,7 @@ async function handleFilesUpload(filesList) {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('questionPaperId', elements.evaluationQpSelect.value || "");
+      formData.append('difficulty', selectedDifficulty);
       
       const uploadRes = await fetch(`${apiBaseUrl}/api/upload`, {
         method: 'POST',
@@ -442,7 +484,7 @@ async function handleFilesUpload(filesList) {
         const avatar = document.getElementById(`upload-icon-${i}`);
         
         // 2. Trigger multi-agent pipeline evaluate
-        statusText.innerText = "Triggering multi-agent evaluator...";
+        statusText.innerText = `Evaluating with [${selectedDifficulty.toUpperCase()}] rigor...`;
         bar.style.width = "50%";
         badge.innerText = "Agent Evaluator";
         
@@ -451,7 +493,8 @@ async function handleFilesUpload(filesList) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             studentId,
-            questionPaperId: elements.evaluationQpSelect.value || ""
+            questionPaperId: elements.evaluationQpSelect.value || "",
+            difficulty: selectedDifficulty
           })
         });
         const evalResult = await evalRes.json();
@@ -545,7 +588,8 @@ function simulateOfflineUpload() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             studentId: "CS2026-085",
-            questionPaperId: elements.evaluationQpSelect.value || ""
+            questionPaperId: elements.evaluationQpSelect.value || "",
+            difficulty: selectedDifficulty
           })
         });
       } catch (e) {}
@@ -578,6 +622,8 @@ const ws2State = {
 const ws2 = {
   studentName: document.getElementById('ws2StudentName'),
   studentRoll: document.getElementById('ws2StudentRoll'),
+  diffSelect: document.getElementById('ws2DiffSelect'),
+  recheckBtn: document.getElementById('ws2RecheckBtn'),
   sheetSeat: document.getElementById('ws2SheetSeat'),
   sheetPaper: document.getElementById('ws2SheetPaper'),
   sheetPage: document.getElementById('ws2SheetPage'),
@@ -586,8 +632,6 @@ const ws2 = {
   zoomVal: document.getElementById('ws2ZoomVal'),
   sheet: document.getElementById('ws2Sheet'),
   sheetScroll: document.getElementById('ws2SheetScroll'),
-  confBadge: document.getElementById('ws2ConfBadge'),
-  confLabel: document.getElementById('ws2ConfLabel'),
   qNo: document.getElementById('ws2QNo'),
   qText: document.getElementById('ws2QText'),
   qMax: document.getElementById('ws2QMax'),
@@ -609,6 +653,9 @@ const ws2 = {
   btnConfirm: document.getElementById('ws2BtnConfirm'),
   btnAdjust: document.getElementById('ws2BtnAdjust'),
   btnFlag: document.getElementById('ws2BtnFlag'),
+  studentIdx: document.getElementById('ws2StudentIdx'),
+  prevStudentBtn: document.getElementById('ws2PrevStudent'),
+  nextStudentBtn: document.getElementById('ws2NextStudent'),
   zoomIn: document.getElementById('ws2ZoomIn'),
   zoomOut: document.getElementById('ws2ZoomOut'),
   pgPrev: document.getElementById('ws2PgPrev'),
@@ -682,17 +729,6 @@ function ws2RenderEval() {
   ws2.qScoreMax.textContent = qData.maxScore;
   ws2.studentAnswer.textContent = qData.ocrText || "Digitized text is being processed…";
 
-  const badge = ws2.confBadge;
-  if (ws2Student.confidence < 80) {
-    badge.className = "ws2-conf low";
-    badge.querySelector(".ws2-dot").style.background = "var(--warning)";
-    ws2.confLabel.textContent = "Needs a closer look";
-  } else {
-    badge.className = "ws2-conf high";
-    badge.querySelector(".ws2-dot").style.background = "var(--success)";
-    ws2.confLabel.textContent = "High confidence";
-  }
-
   let rows = "";
   points.forEach((p, i) => {
     const weak = awarded[i] < p.maxMarks ? '<span class="ws2-verify">Verify</span>' : '';
@@ -700,26 +736,90 @@ function ws2RenderEval() {
       '<div class="ws2-crit">' +
         '<div>' +
           '<div class="ws2-crit-name"><span class="ws2-crit-idx">' + (i + 1) + '</span>' + esc(p.text) + weak + '</div>' +
-          '<div class="ws2-crit-note"><span class="why">Why</span>Suggested coverage from the AI grader. Max allocation: ' + p.maxMarks + ' marks.</div>' +
+          '<div class="ws2-crit-note"><span class="why">Why</span>Suggested coverage from the AI grader.</div>' +
         '</div>' +
         '<div class="ws2-crit-ctrl">' +
           '<button class="ws2-stepper" data-mi="' + i + '" data-d="-1" aria-label="Decrease mark">−</button>' +
-          '<span class="ws2-pts">' + awarded[i] + '<span class="ws2-of"> / ' + p.maxMarks + '</span></span>' +
+          '<div class="ws2-pts-input-wrap">' +
+            '<input type="number" class="ws2-crit-input" data-mi="' + i + '" min="0" max="' + p.maxMarks + '" step="any" value="' + awarded[i] + '">' +
+            '<span class="ws2-of">/ ' + p.maxMarks + '</span>' +
+          '</div>' +
           '<button class="ws2-stepper" data-mi="' + i + '" data-d="1" aria-label="Increase mark">+</button>' +
         '</div>' +
       '</div>';
   });
   ws2.rubricRows.innerHTML = rows;
 
+  // Stepper buttons (+ / -) incrementing/decrementing by 0.5 only without resetting scroll
   ws2.rubricRows.querySelectorAll(".ws2-stepper").forEach(b => {
-    b.addEventListener("click", () => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
       const mi = +b.dataset.mi, d = +b.dataset.d;
       const max = points[mi].maxMarks;
-      const step = (max % 1 !== 0) ? 0.5 : 1;
-      awarded[mi] = Math.max(0, Math.min(max, +(awarded[mi] + d * step).toFixed(1)));
+      const step = 0.5;
+      const newScore = Math.max(0, Math.min(max, +(awarded[mi] + d * step).toFixed(2)));
+      awarded[mi] = newScore;
       ws2State.edited[qid] = true;
-      ws2RenderAll();
-      ws2SetStatus("Adjusted — this question now differs from the suggestion.", false);
+
+      // Update input field in-place
+      const input = ws2.rubricRows.querySelector(`.ws2-crit-input[data-mi="${mi}"]`);
+      if (input) input.value = newScore;
+
+      const total = ws2AwardedTotal(qid);
+      ws2.qScore.textContent = total;
+
+      const src = ws2.scoreSrc;
+      const st = ws2State.questionStatus[qid];
+      src.classList.remove("edited");
+      if (st === 'done') {
+        src.textContent = "Confirmed · edited by you";
+        src.classList.add("edited");
+      } else if (st === 'flagged') {
+        src.textContent = "Flagged for a second look";
+      } else {
+        src.textContent = "Edited by you · not yet confirmed";
+      }
+
+      ws2RenderSheet();
+      ws2RenderTotals();
+      ws2SetStatus("Adjusted by " + (d > 0 ? "+0.5" : "-0.5") + " marks (" + newScore + "/" + max + ").", false);
+    });
+  });
+
+  // Direct numeric input listeners without resetting scroll
+  ws2.rubricRows.querySelectorAll(".ws2-crit-input").forEach(input => {
+    input.addEventListener("input", (e) => {
+      const mi = +input.dataset.mi;
+      const max = points[mi].maxMarks;
+      let val = parseFloat(e.target.value);
+      if (isNaN(val)) val = 0;
+      val = Math.max(0, Math.min(max, val));
+      awarded[mi] = val;
+      ws2State.edited[qid] = true;
+
+      const total = ws2AwardedTotal(qid);
+      ws2.qScore.textContent = total;
+
+      const src = ws2.scoreSrc;
+      const st = ws2State.questionStatus[qid];
+      src.classList.remove("edited");
+      if (st === 'done') {
+        src.textContent = "Confirmed · edited by you";
+        src.classList.add("edited");
+      } else if (st === 'flagged') {
+        src.textContent = "Flagged for a second look";
+      } else {
+        src.textContent = "Edited by you · not yet confirmed";
+      }
+
+      ws2RenderSheet();
+      ws2RenderTotals();
+      ws2SetStatus("Custom mark entered (" + val + " / " + max + ").", false);
+    });
+
+    input.addEventListener("blur", () => {
+      const mi = +input.dataset.mi;
+      input.value = awarded[mi];
     });
   });
 
@@ -857,17 +957,63 @@ function initWorkspaceLogic() {
     const qid = ws2State.current;
     ws2State.questionStatus[qid] = 'done';
     ws2Student.questions[qid].score = ws2AwardedTotal(qid);
-    ws2RenderAll();
-    ws2SetStatus("Confirmed. Use → to move to the next question.", true);
+    
     await ws2SaveToBackend(false);
+
+    const qids = ws2QuestionIds();
+    const curIdx = qids.indexOf(qid);
+    
+    if (curIdx < qids.length - 1) {
+      // Automatically advance to the next question
+      const nextQid = qids[curIdx + 1];
+      ws2State.current = nextQid;
+      ws2.pageLabel.textContent = "p. " + (curIdx + 2) + " / " + qids.length;
+      ws2RenderAll();
+      ws2SetStatus(`Confirmed Q${qid.replace('q', '')} (${ws2AwardedTotal(qid)} marks). Advanced to Q${nextQid.replace('q', '')}.`, true);
+    } else {
+      // Last question confirmed!
+      ws2RenderNav();
+      ws2RenderTotals();
+      ws2RenderSheet();
+      ws2.scoreSrc.textContent = ws2State.edited[qid] ? "Confirmed · edited by you" : "Confirmed by you";
+      if (ws2State.edited[qid]) ws2.scoreSrc.classList.add("edited");
+      
+      const allDone = qids.every(q => ws2State.questionStatus[q] === 'done');
+      if (allDone) {
+        if (currentStudentIndex < students.length - 1) {
+          ws2SetStatus(`All questions confirmed for ${ws2Student.name}! Click 'Next Student' (or press N) to evaluate the next paper.`, true);
+        } else {
+          ws2SetStatus(`All questions confirmed for ${ws2Student.name}! All student papers in queue evaluated.`, true);
+        }
+      } else {
+        ws2SetStatus(`Confirmed Q${qid.replace('q', '')}. Review remaining questions or move to next student.`, true);
+      }
+    }
   });
 
   ws2.btnFlag.addEventListener('click', async () => {
     const qid = ws2State.current;
     ws2State.questionStatus[qid] = 'flagged';
-    ws2RenderAll();
+    ws2RenderNav();
+    ws2RenderTotals();
+    ws2RenderSheet();
+    ws2.scoreSrc.textContent = "Flagged for a second look";
+    ws2.scoreSrc.classList.remove("edited");
+    ws2SetStatus("Flagged for a second look. You can revisit it anytime.", false);
     await ws2SaveToBackend(true);
   });
+
+  if (ws2.prevStudentBtn) ws2.prevStudentBtn.addEventListener('click', ws2PrevStudent);
+  if (ws2.nextStudentBtn) ws2.nextStudentBtn.addEventListener('click', ws2NextStudent);
+
+  // Re-check difficulty switcher in workspace
+  if (ws2.recheckBtn) {
+    ws2.recheckBtn.addEventListener('click', async () => {
+      if (!ws2Student) return;
+      const targetDiff = ws2.diffSelect ? ws2.diffSelect.value : 'medium';
+      await ws2RecheckDifficulty(targetDiff);
+    });
+  }
 
   document.addEventListener("keydown", e => {
     if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
@@ -876,9 +1022,76 @@ function initWorkspaceLogic() {
     const idx = qids.indexOf(ws2State.current);
     if (e.key === "a" || e.key === "A") ws2.btnConfirm.click();
     else if (e.key === "f" || e.key === "F") ws2.btnFlag.click();
-    else if (e.key === "ArrowRight") { if (idx < qids.length - 1) { ws2State.current = qids[idx + 1]; ws2RenderAll(); } }
-    else if (e.key === "ArrowLeft") { if (idx > 0) { ws2State.current = qids[idx - 1]; ws2RenderAll(); } }
+    else if (e.key === "n" || e.key === "N") ws2NextStudent();
+    else if (e.key === "p" || e.key === "P") ws2PrevStudent();
+    else if (e.key === "ArrowRight") { if (idx < qids.length - 1) { ws2State.current = qids[idx + 1]; ws2.pageLabel.textContent = "p. " + (idx + 2) + " / " + qids.length; ws2RenderAll(); } }
+    else if (e.key === "ArrowLeft") { if (idx > 0) { ws2State.current = qids[idx - 1]; ws2.pageLabel.textContent = "p. " + idx + " / " + qids.length; ws2RenderAll(); } }
   });
+}
+
+async function ws2RecheckDifficulty(targetDiff) {
+  if (!ws2Student) return;
+  if (ws2.recheckBtn) {
+    ws2.recheckBtn.disabled = true;
+    ws2.recheckBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+  }
+  try {
+    const res = await fetch(`${apiBaseUrl}/api/evaluate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentId: ws2Student.id,
+        questionPaperId: ws2Student.questionPaperId || "",
+        difficulty: targetDiff
+      })
+    });
+    const data = await res.json();
+    if (data.status === 'success' && data.student) {
+      const idx = students.findIndex(s => s.id === ws2Student.id);
+      if (idx !== -1) {
+        students[idx] = data.student;
+      }
+      ws2Student = data.student;
+      ws2State.questionStatus = {};
+      ws2State.edited = {};
+      ws2State.awarded = {};
+      ws2QuestionIds().forEach(qid => {
+        ws2State.awarded[qid] = deriveAwarded(qid, ws2Student.questions[qid]);
+      });
+      ws2RenderAll();
+      ws2SetStatus(`Re-evaluated under [${targetDiff.toUpperCase()}] grading strictness.`, true);
+      renderQueueTable();
+      updateHeaderStats();
+    } else {
+      alert("Evaluation error: " + (data.message || "Unknown error"));
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Connection error while re-evaluating: " + err.message);
+  } finally {
+    if (ws2.recheckBtn) {
+      ws2.recheckBtn.disabled = false;
+      ws2.recheckBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> Re-check';
+    }
+  }
+}
+
+function ws2NextStudent() {
+  if (currentStudentIndex < students.length - 1) {
+    loadStudentIntoWorkspace(currentStudentIndex + 1);
+    ws2SetStatus(`Loaded next student: ${ws2Student.name} (${currentStudentIndex + 1} of ${students.length})`, true);
+  } else {
+    ws2SetStatus("You are already on the last student in the queue.", false);
+  }
+}
+
+function ws2PrevStudent() {
+  if (currentStudentIndex > 0) {
+    loadStudentIntoWorkspace(currentStudentIndex - 1);
+    ws2SetStatus(`Loaded previous student: ${ws2Student.name} (${currentStudentIndex + 1} of ${students.length})`, false);
+  } else {
+    ws2SetStatus("You are on the first student in the queue.", false);
+  }
 }
 
 function loadStudentIntoWorkspace(index) {
@@ -897,6 +1110,22 @@ function loadStudentIntoWorkspace(index) {
 
   ws2.studentName.textContent = ws2Student.name;
   ws2.studentRoll.textContent = ws2Student.id + " · " + ws2Student.format;
+  
+  if (ws2.studentIdx) {
+    ws2.studentIdx.textContent = `${index + 1} of ${students.length}`;
+  }
+  if (ws2.prevStudentBtn) {
+    ws2.prevStudentBtn.disabled = index <= 0;
+  }
+  if (ws2.nextStudentBtn) {
+    ws2.nextStudentBtn.disabled = index >= students.length - 1;
+  }
+
+  const diff = ws2Student.difficulty || 'medium';
+  if (ws2.diffSelect) {
+    ws2.diffSelect.value = diff;
+  }
+
   ws2.sheetSeat.textContent = "Roll No. " + ws2Student.id;
   const rubric = rubricsList.length ? rubricsList[0] : null;
   const paperLabel = ws2Student.questionPaper || (rubric ? rubric.subject : null);
