@@ -1,0 +1,1 @@
+"""Database layer: JSON file storage for the demo backend."""
