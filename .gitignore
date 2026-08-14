@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Runtime data & secrets
+db.json
+uploads/
+
+# Local config
+.env
