@@ -8,7 +8,7 @@ import json
 import os
 import time
 
-DEFAULT_MODEL = "gemini-3.5-flash"
+DEFAULT_MODEL = "gemini-1.5-flash"
 MAX_RETRIES = 6
 
 
