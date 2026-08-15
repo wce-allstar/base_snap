@@ -453,8 +453,6 @@ def api_approve_grade():
     
     if idx != -1:
         student = students[idx]
-        student['status'] = "Approved"
-        
         # update question scores
         for qid, qscore in q_scores.items():
             if qid in student['questions']:
@@ -462,13 +460,20 @@ def api_approve_grade():
                 
         student['aiScore'] = float(round(sum(q.get('score', 0) for q in student['questions'].values()), 1))
         student['maxScore'] = sum(q.get('maxScore', 10) for q in student['questions'].values())
-        
-        if comments.strip():
-            student['selfCheck'] = "Manually Overridden"
+
+        is_flagged = "flag" in comments.lower()
+        if is_flagged:
+            student['status'] = "Flagged"
+            student['selfCheck'] = "Flagged: Moderator Audit"
+        else:
+            student['status'] = "Approved"
+            if comments.strip():
+                student['selfCheck'] = "Manually Overridden"
             
         db['students'] = students
         save_db(db)
-        append_log('checker', f"Moderator approved and locked grades for Roll: {student_id}.", 'success')
+        log_msg = f"Moderator flagged script for audit: {student_id}." if is_flagged else f"Moderator approved and locked grades for Roll: {student_id}."
+        append_log('checker', log_msg, 'warn' if is_flagged else 'success')
         return jsonify({"status": "success"})
         
     return jsonify({"status": "error", "message": "Student not found"}), 404

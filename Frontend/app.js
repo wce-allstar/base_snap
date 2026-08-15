@@ -9,8 +9,9 @@ let rubricsList = [];
 let currentStudentIndex = 0;
 let currentQuestionId = "q1"; 
 let uploadProgressInterval = null;
-let questionPapers = [];
-let apiBaseUrl = "http://localhost:8000"; // empty string is relative paths for same-origin server hosting
+let apiBaseUrl = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== "null" && !window.location.origin.startsWith("file:"))
+  ? window.location.origin
+  : "http://localhost:8000";
 let selectedDifficulty = "medium"; // 'easy' | 'medium' | 'hard'
 
 const difficultyHints = {
@@ -238,10 +239,6 @@ async function handleLoginSubmit(event) {
     const result = await response.json();
     
     if (result.status === 'success') {
-      setTimeout(() => {
-        elements.btnLoginText.innerHTML = `<i class="fa-solid fa-circle-notch pulsing"></i> <span>Syncing active database...</span>`;
-      }, 800000); // Dummy delay visual placeholder logic
-      
       // Complete transition
       elements.loginScreen.style.display = "none";
       elements.appWrapper.style.display = "flex";
@@ -398,8 +395,6 @@ function updateHeaderStats() {
 
 // --- UPLOAD PIPELINE IMPLEMENTATION ---
 function initUploadLogic() {
-  const dropZone = elements.dropZone;
-  
   // Difficulty selector buttons
   elements.diffBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -407,6 +402,69 @@ function initUploadLogic() {
       setUploadDifficulty(diff);
     });
   });
+
+  // Drag and drop support for answer sheets
+  if (elements.dropZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      elements.dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elements.dropZone.classList.add('drag-active');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      elements.dropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        elements.dropZone.classList.remove('drag-active');
+      }, false);
+    });
+
+    elements.dropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        handleFilesUpload(files);
+      }
+    });
+  }
+
+  // Drag and drop support for question papers
+  const qpDropZone = document.getElementById('qp-drop-zone');
+  if (qpDropZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      qpDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        qpDropZone.classList.add('drag-active');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      qpDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        qpDropZone.classList.remove('drag-active');
+      }, false);
+    });
+
+    qpDropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        handleQuestionPaperUpload(files);
+      }
+    });
+  }
+
+  // Cancel upload button handler
+  if (elements.cancelUploadBtn) {
+    elements.cancelUploadBtn.addEventListener('click', () => {
+      if (uploadProgressInterval) clearInterval(uploadProgressInterval);
+      elements.uploadProgressPanel.style.display = "none";
+    });
+  }
 
   elements.fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
@@ -672,7 +730,15 @@ function ws2QuestionIds() {
 
 // Distribute a question's total score across rubric criteria based on coverage.
 function deriveAwarded(qid, qData) {
-  const points = modelAnswerRubric[qid].rubricPoints;
+  const schema = modelAnswerRubric[qid] || {
+    question: `Question ${qid.replace('q', '')}`,
+    rubricPoints: [
+      { id: "p1", text: "Conceptual accuracy and definitions.", maxMarks: Math.ceil((qData?.maxScore || 10) * 0.4) },
+      { id: "p2", text: "Structure, proof / implementation logic.", maxMarks: Math.floor((qData?.maxScore || 10) * 0.3) },
+      { id: "p3", text: "Completeness and edge-case handling.", maxMarks: Math.floor((qData?.maxScore || 10) * 0.3) }
+    ]
+  };
+  const points = schema.rubricPoints;
   const coverage = points.map(p => {
     if (qid === 'q1') {
       if (p.id === 'balancing' && qData.score < 8.5) return 'partial';
@@ -716,8 +782,15 @@ function ws2RenderSheet() {
 
 function ws2RenderEval() {
   const qid = ws2State.current;
-  const qData = ws2Student.questions[qid];
-  const schema = modelAnswerRubric[qid];
+  const qData = ws2Student.questions[qid] || { score: 0, maxScore: 10, ocrText: "" };
+  const schema = modelAnswerRubric[qid] || {
+    question: `Question ${qid.replace('q', '')}`,
+    rubricPoints: [
+      { id: "p1", text: "Conceptual accuracy and definitions.", maxMarks: Math.ceil(qData.maxScore * 0.4) },
+      { id: "p2", text: "Structure, proof / implementation logic.", maxMarks: Math.floor(qData.maxScore * 0.3) },
+      { id: "p3", text: "Completeness and edge-case handling.", maxMarks: Math.floor(qData.maxScore * 0.3) }
+    ]
+  };
   const points = schema.rubricPoints;
   const awarded = ws2State.awarded[qid] || deriveAwarded(qid, qData);
   ws2State.awarded[qid] = awarded;
