@@ -9,3 +9,6 @@ uploads/
 
 # Local config
 .env
+ai/agenticeval_ai.egg-info/
+ai/demo_report.json
+.ai/.venv/
