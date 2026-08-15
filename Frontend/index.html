@@ -218,6 +218,7 @@
                       <th>Roll Number</th>
                       <th>Student Name</th>
                       <th>Submission Format</th>
+                      <th>Checking Rigor</th>
                       <th>AI Suggested Marks</th>
                       <th>AI Confidence</th>
                       <th>Question Paper</th>
@@ -271,6 +272,29 @@
                   <option value="">Select a question paper...</option>
                 </select>
               </div>
+              <div class="form-group">
+                <label><i class="fa-solid fa-sliders" style="margin-right: 0.35rem;"></i>Checking Difficulty / Strictness</label>
+                <div class="difficulty-selector" id="difficulty-selector">
+                  <button type="button" class="diff-btn" data-difficulty="easy" id="diff-btn-easy">
+                    <span class="diff-dot easy"></span>
+                    <span class="diff-title">Easy</span>
+                    <span class="diff-sub">Lenient</span>
+                  </button>
+                  <button type="button" class="diff-btn active medium" data-difficulty="medium" id="diff-btn-medium">
+                    <span class="diff-dot medium"></span>
+                    <span class="diff-title">Medium</span>
+                    <span class="diff-sub">Standard</span>
+                  </button>
+                  <button type="button" class="diff-btn" data-difficulty="hard" id="diff-btn-hard">
+                    <span class="diff-dot hard"></span>
+                    <span class="diff-title">Hard</span>
+                    <span class="diff-sub">Strict</span>
+                  </button>
+                </div>
+                <div class="difficulty-hint" id="difficulty-hint">
+                  <i class="fa-solid fa-circle-info"></i> Standard academic grading: balanced rubric criteria and proportional deductions.
+                </div>
+              </div>
               <div class="drag-drop-zone" id="drop-zone">
                 <i class="fa-solid fa-cloud-arrow-up cloud-icon"></i>
                 <h3>Drag & Drop Scanned Answer Sheets</h3>
@@ -307,10 +331,14 @@
             <header class="ws2-topbar">
               <div class="ws2-brand">
                 <div class="ws2-brand-name">Evaluation <span class="ws2-lt">Workspace</span></div>
-                <div class="ws2-brand-sub">Assisted marking</div>
               </div>
               <div class="ws2-candidate">
                 <div class="ws2-vsep"></div>
+                <div class="ws2-student-switcher" title="Switch between student papers">
+                  <button class="ws2-nav-student-btn" id="ws2PrevStudent" title="Previous student (P or Shift+←)"><i class="fa-solid fa-chevron-left"></i></button>
+                  <span class="ws2-student-idx" id="ws2StudentIdx">1 of 3</span>
+                  <button class="ws2-nav-student-btn" id="ws2NextStudent" title="Next student (N or Shift+→)"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
                 <div class="ws2-fld">Student <b id="ws2StudentName">—</b></div>
                 <span class="ws2-pill" id="ws2StudentRoll">—</span>
               </div>
@@ -318,6 +346,7 @@
                 <span class="ws2-kbd"><b>A</b> confirm</span>
                 <span class="ws2-kbd"><b>F</b> flag</span>
                 <span class="ws2-kbd"><b>← →</b> questions</span>
+                <span class="ws2-kbd"><b>N</b> next student</span>
               </div>
             </header>
 
@@ -369,7 +398,16 @@
                 <div class="ws2-pane-toolbar">
                   <div class="ws2-pane-title">Suggested evaluation</div>
                   <div class="ws2-controls">
-                    <span class="ws2-conf" id="ws2ConfBadge"><span class="ws2-dot"></span><span id="ws2ConfLabel">High confidence</span></span>
+                    <div class="ws2-diff-switch-wrap">
+                      <select id="ws2DiffSelect" class="ws2-diff-select" title="Change Checking Difficulty">
+                        <option value="easy">🟢 Easy (Lenient)</option>
+                        <option value="medium" selected>🟡 Medium (Standard)</option>
+                        <option value="hard">🔴 Hard (Strict)</option>
+                      </select>
+                      <button id="ws2RecheckBtn" class="ws2-recheck-btn" title="Re-evaluate student with selected difficulty">
+                        <i class="fa-solid fa-arrows-rotate"></i> Re-check
+                      </button>
+                    </div>
                   </div>
                 </div>
 
