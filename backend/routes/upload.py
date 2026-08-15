@@ -3,14 +3,19 @@
 import os
 import time
 
-from flask import jsonify, request
+from flask import jsonify, request, send_from_directory
 
-from ..database.connection import load_db, save_db
+from ..database.connection import UPLOAD_FOLDER, load_db, save_db
 from ..services.file_service import extract_text, now_str, save_upload
 from ..utils.logging import append_log
 
 
 def register_routes(app):
+    @app.route('/api/uploads/<path:filename>', methods=['GET'])
+    def serve_upload(filename):
+        """Serve an uploaded file (image or PDF) so the frontend can display it."""
+        return send_from_directory(UPLOAD_FOLDER, filename)
+
     @app.route('/api/question-papers', methods=['GET'])
     def api_list_question_papers():
         db = load_db()

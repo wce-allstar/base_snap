@@ -772,31 +772,73 @@ function ws2RenderSheet() {
   const pillCls = status === 'done' ? 'confirmed' : (status === 'flagged' ? 'review' : 'suggest');
   const pillTxt = status === 'done' ? 'Confirmed' : (status === 'flagged' ? 'Review' : 'Suggested');
   const total = ws2AwardedTotal(qid);
+
+  // Build the answer sheet viewer: show uploaded image/PDF if available, else show OCR text
+  let sheetContent = '';
+  const filePath = ws2Student.filePath || '';
+  const fileName = filePath ? filePath.split('/').pop() : '';
+  const isPdf = fileName.toLowerCase().endsWith('.pdf');
+  const isImage = /\.(png|jpg|jpeg|webp|gif)$/i.test(fileName);
+
+  if (fileName && (isPdf || isImage)) {
+    const fileUrl = `${apiBaseUrl}/api/uploads/${encodeURIComponent(fileName)}`;
+    if (isPdf) {
+      sheetContent = `<iframe src="${fileUrl}" style="width:100%;height:520px;border:none;border-radius:6px;" title="Uploaded answer sheet PDF"></iframe>`;
+    } else {
+      sheetContent = `<img src="${fileUrl}" alt="Uploaded answer sheet" style="width:100%;border-radius:6px;display:block;" />`;
+    }
+  } else {
+    // No uploaded file — display the OCR/handwriting text as before
+    const displayText = qData.handwritingMock || qData.ocrText || 'No digitized answer yet.';
+    sheetContent = '<div class="ws2-hand">' + esc(displayText) + '</div>';
+  }
+
   ws2.sheetBody.innerHTML =
     '<div class="ws2-q-mark"><span class="q">' + qid.toUpperCase() + '</span>' +
     '<span class="ws2-qpts">' + total + ' <span class="ws2-of">/ ' + qData.maxScore + ' marks</span></span></div>' +
-    '<div class="ws2-hand">' + esc(qData.handwritingMock || qData.ocrText || "No digitized answer yet.") + '</div>' +
+    sheetContent +
     '<div class="ws2-sheet-note"><span class="ws2-score-pill ' + pillCls + '">' + CHECK_ICON +
     ' ' + pillTxt + ' marks <b>' + total + ' / ' + qData.maxScore + '</b></span></div>';
 }
 
+
 function ws2RenderEval() {
   const qid = ws2State.current;
   const qData = ws2Student.questions[qid] || { score: 0, maxScore: 10, ocrText: "" };
-  const schema = modelAnswerRubric[qid] || {
-    question: `Question ${qid.replace('q', '')}`,
-    rubricPoints: [
-      { id: "p1", text: "Conceptual accuracy and definitions.", maxMarks: Math.ceil(qData.maxScore * 0.4) },
-      { id: "p2", text: "Structure, proof / implementation logic.", maxMarks: Math.floor(qData.maxScore * 0.3) },
-      { id: "p3", text: "Completeness and edge-case handling.", maxMarks: Math.floor(qData.maxScore * 0.3) }
-    ]
-  };
-  const points = schema.rubricPoints;
+
+  // Use real AI coverage from evaluation if available, else fall back to hardcoded or generic rubric
+  let points;
+  let questionText;
+
+  if (qData.coverage && qData.coverage.length > 0) {
+    // Real AI evaluation data is available — use actual coverage criteria
+    questionText = `Question ${qid.replace('q', '')}`;
+    const maxPerCrit = qData.maxScore / qData.coverage.length;
+    points = qData.coverage.map((c, i) => ({
+      id: `c${i}`,
+      text: c.criterion,
+      maxMarks: Math.round(maxPerCrit * 10) / 10,
+      status: c.status
+    }));
+  } else {
+    // No AI evaluation yet — try hardcoded schema or use generic fallback
+    const schema = modelAnswerRubric[qid] || {
+      question: `Question ${qid.replace('q', '')}`,
+      rubricPoints: [
+        { id: "p1", text: "Conceptual accuracy and definitions.", maxMarks: Math.ceil(qData.maxScore * 0.4) },
+        { id: "p2", text: "Structure, proof / implementation logic.", maxMarks: Math.floor(qData.maxScore * 0.3) },
+        { id: "p3", text: "Completeness and edge-case handling.", maxMarks: Math.floor(qData.maxScore * 0.3) }
+      ]
+    };
+    questionText = schema.question;
+    points = schema.rubricPoints;
+  }
+
   const awarded = ws2State.awarded[qid] || deriveAwarded(qid, qData);
   ws2State.awarded[qid] = awarded;
 
   ws2.qNo.textContent = "Question " + qid.replace('q', '');
-  ws2.qText.textContent = schema.question;
+  ws2.qText.textContent = questionText;
   ws2.qMax.textContent = qData.maxScore;
   ws2.qCritN.textContent = points.length;
   ws2.qScoreMax.textContent = qData.maxScore;
